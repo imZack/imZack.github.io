@@ -11,11 +11,10 @@ before_install:
   - cp .travis/ssh_config ~/.ssh/config
   - git config --global user.name "YuLun Shih"
   - git config --global user.email shih@yulun.me
-  - npm install
-  - git clone -b gh-pages https://github.com/imZack/imZack.github.io .deploy
+  - git clone https://github.com/imZack/imZack.github.io .deploy
 script:
   - hexo generate
   - hexo deploy
 branches:
   only:
-    - master
+    - source
