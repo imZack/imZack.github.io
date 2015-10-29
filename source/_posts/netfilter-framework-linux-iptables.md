@@ -1,8 +1,14 @@
-# Netfilter Framework
+title: '淺讀 Netfilter Framework'
+date: 2015-10-29 22:16:40
+tags:
+	- iptables
+  - Netfilter
+  - Linux
+---
 
 ## Background
 - Linux 2.3.x 時期 Paul Rusty Russel 寫的
-- 基本上就是插入一些 Hooks 到 kernel module
+- 基本上就是插入一些 Hooks 到 Kernel module
 - Iptables 常常跟 Netfilter Framework 搞混，Iptables 屬於 Netfilter Framework 的一員
 
 ## Hooks and The Callback Functions
@@ -11,11 +17,14 @@
 
 ```
 --> PREROUTING ---> [ROUTE] ---> FORWARD -------------------> POSTROUTING -->
+                      |                              ^
                       |                              |
                       |                           [ROUTE]
-                      |                              |
+                      V                              |
                    LOCAL IN ---> LOCAL PROCESS --> LOCAL OUT
 ```
+
+<!-- more -->
 
 1. PREROUTING: 所有封包都會經過這個階段，Port
 Address Translation (NAPT), Redirections, Destination Network Translation (DNAT) 皆是在這裡被實現
@@ -60,4 +69,6 @@ not filter.
 3. RELATED: 這是一個被期待發生的連線，詳見 "Helpers and Expectations"
 4. INVALID: 隸屬於特別狀態，管理者可設定去紀錄或拋棄此類封包
 
-### 綜觀
+## 參考資料
+- http://www.netfilter.org/
+- http://people.netfilter.org/pablo/docs/login.pdf
