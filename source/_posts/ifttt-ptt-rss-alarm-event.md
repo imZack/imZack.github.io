@@ -15,6 +15,21 @@ tags:
 
 <!-- more -->
 
+## 2015/12/20 更新
+大約一個月前 PTT Web 的時間欄位有更新，所以 Server 記得要更新喔！不然會收不到通知。另一方面也順手新增：文章標題關鍵字過濾功能(支援多個)，這樣就更方便啦！
+
+使用方式：
+
+```sh
+// Single keyword
+curl http://localhost:8000/Gossiping.xml?title=肥宅
+
+// Multiple keywords
+curl http://localhost:8000/Gossiping.xml?title=肥宅&title=國民黨
+```
+
+所以只要把上面網址貼到原先的 **New feed item** 就可以啦！
+
 
 ## 架設 PTT RSS Service
 
