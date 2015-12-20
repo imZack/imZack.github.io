@@ -1,8 +1,9 @@
 title: Pebble Watch App - Taipei Bus 台北公車時刻
 date: 2014-08-18 21:31:58
 tags:
-	- pebble
-	- app
+	- Pebble
+	- App
+	- Projects
 ---
 
 繼上一篇[台北公車 API](https://github.com/imZack/taipei-bus)，擁有了公車時刻資訊後我就可以專心開發 [Pebble Watch](http://www.zack.tw/2013/02/pebble-watch.html) 的程式了！一開始感覺開發手錶 APP 好像挺難的，看到有個 Opensource 專案 [pebble-my-data](https://github.com/bahbka/pebble-my-data) 主要是可以讀取 server 上的 **.json 資料** 然後顯示在手錶上！
@@ -25,4 +26,3 @@ tags:
 Anyway，這個 APP 目前還不完善，應該就我自己先將就著用囉！
 
 原始碼：[Github ❤](https://github.com/imZack/pebble-taipei-bus)
-

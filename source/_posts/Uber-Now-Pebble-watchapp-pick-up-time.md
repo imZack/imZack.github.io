@@ -1,9 +1,10 @@
 title: Uber Now - Pebble watchapp (已下架)
 date: 2014-08-24 23:47:50
 tags:
-	- pebble
-	- app
-	- uber
+	- Pebble
+	- App
+	- Uber
+	- Projects
 ---
 
 **2015/08/13 Update**: 今天一早收到 Uber 法務寄給 Pebble 的信，大致上是說本 APP 侵害商標所以就被下架囉～是說好像 Pebble 前陣子推出一款綜合的交通 Watch App 呢！Anyway, Goodbye Pebble.

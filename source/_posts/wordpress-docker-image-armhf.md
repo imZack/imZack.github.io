@@ -4,6 +4,7 @@ tags:
   - Raspberry Pi
   - Docker
   - WordPress
+  - Projects
 ---
 最近把吃喝玩樂 Blog 從 Blogspot 搬到 WordPress 了！於是乎就想要玩玩各種功能...
 
