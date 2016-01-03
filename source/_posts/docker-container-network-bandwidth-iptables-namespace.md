@@ -11,15 +11,19 @@ tags:
 
 具體方式如下：
 
-```
 1. 取得 Container PID, 這邊我查看名為 wordpress_wordpress_1 的 container
+```
 λ ~/docker inspect -f '{{ .State.Pid }}' wordpress_wordpress_1
 658
+```
 
 2. 建立連結至 /var/run/netns/ 供 ip netns 使用
+```
 λ ~/sudo ln -sf /proc/658/ns/net /var/run/netns/wordpress
+```
 
 3. 利用 ip netns 接 iptables 流量就一目了然了！
+```
 λ ~/sudo ip netns exec wordpress iptables -L -nv
 Chain INPUT (policy ACCEPT 639 packets, 106K bytes)
  pkts bytes target     prot opt in     out     source               destination         
@@ -29,7 +33,6 @@ Chain FORWARD (policy ACCEPT 0 packets, 0 bytes)
 
 Chain OUTPUT (policy ACCEPT 610 packets, 882K bytes)
  pkts bytes target     prot opt in     out     source               destination
-
 ```
 
 Reference: [Counting bandwidth from a Docker container](http://serverfault.com/questions/615854/counting-bandwidth-from-a-docker-container)
