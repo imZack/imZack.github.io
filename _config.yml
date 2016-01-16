@@ -117,3 +117,7 @@ feed:
 # Livereload plugin
 livereload:
   port: 35729
+
+nofollow:
+  enable: true
+  exclude:
