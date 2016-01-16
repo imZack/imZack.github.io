@@ -1,9 +1,10 @@
 title: 架設 tftp server 在 Ubuntu 環境
-date: 2016-01-03 23:53:47
 tags:
   - Debian
-  - Ubuntu
   - Tftp
+  - Ubuntu
+categories: []
+date: 2016-01-03 23:53:00
 ---
 
 [TFTP (Trivial File Transfer Protocol)](https://en.wikipedia.org/wiki/Trivial_File_Transfer_Protocol)，是很常見的通訊協議用在一些小系統上，如 cisco 韌體更新、或是有些廠家會 BIOS 內建 tftp 下載 rom 檔功能。如此輕巧簡易的通訊協議就很常派上用場。
