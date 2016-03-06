@@ -134,7 +134,7 @@ var test = obj.prop.getFullname;
 console.log(test());
 
 ```
-第一個 ~`Colin Ihrig`~ `Aurelio De Rosa`
+第一個 `Aurelio De Rosa` 原錯誤答案`Colin Ihrig`
 
 第二個 `John Doe`
 
