@@ -132,8 +132,10 @@ console.log(obj.prop.getFullname());
 var test = obj.prop.getFullname;
  
 console.log(test());
+
 ```
-第一個 `Colin Ihrig`
+第一個 ~`Colin Ihrig`~ `Aurelio De Rosa`
+
 第二個 `John Doe`
 
 JavaScript 很不一樣的一點就是 `this` 並**不是跟著 instance 走**。而是**依據誰呼叫 (invoke)** 來決定 `this` 的參考值。(這也常讓不熟稔 JS 的人嘗盡苦頭)...
@@ -145,6 +147,12 @@ JavaScript 很不一樣的一點就是 `this` 並**不是跟著 instance 走**�
 ------------------------------
 修正上面題目，要把第二個印出的答案變為 `Colin Ihrig` 該如何做？
 
+2016.03.07 訂正:
+```js
+console.log(test.call(obj));
+```
+
+錯誤答案:
 ```js
 console.log(test.call(obj.prop));
 ```
