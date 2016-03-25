@@ -14,7 +14,7 @@ sitemap:
 
 # URL
 ## If your site is put in a subdirectory, set url as 'http://yoursite.com/child' and root as '/child/'
-url: https://yulun.me
+url: http://yulun.me
 root: /
 permalink: ":year/:title/"
 tag_dir: tags
