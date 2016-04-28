@@ -1,0 +1,673 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  <link href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css"/>
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+<link href="/vendors/font-awesome/css/font-awesome.min.css?v=4.4.0" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.0.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Docker,NodeJS," />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="Somewhere I Belong" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.0.1" />
+
+
+
+
+
+
+<meta name="description" content="最近在玩 Docker 來記錄一下製作 NodeJS Image 的過程…
+不囉嗦直接看 Dockerfile">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Docker 製作 NodeJS Image 的一些心得">
+<meta property="og:url" content="http://yulun.me/2014/docker-nodejs-build-image-size/index.html">
+<meta property="og:site_name" content="Somewhere I Belong">
+<meta property="og:description" content="最近在玩 Docker 來記錄一下製作 NodeJS Image 的過程…
+不囉嗦直接看 Dockerfile">
+<meta property="og:updated_time" content="2016-04-28T16:57:13.066Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Docker 製作 NodeJS Image 的一些心得">
+<meta name="twitter:description" content="最近在玩 Docker 來記錄一下製作 NodeJS Image 的過程…
+不囉嗦直接看 Dockerfile">
+
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 0,
+      author: '博主'
+    }
+  };
+</script>
+
+  <title> Docker 製作 NodeJS Image 的一些心得 | Somewhere I Belong </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-tw">
+
+  
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-5959305-16', 'auto');
+  ga('send', 'pageview');
+</script>
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Somewhere I Belong</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+  <p class="site-subtitle">All about geek's life</p>
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-home fa-fw"></i> <br />
+            
+            首頁
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-projects">
+          <a href="/projects" rel="section">
+            
+              <i class="menu-item-icon fa fa-question-circle fa-fw"></i> <br />
+            
+            開源專案
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-user fa-fw"></i> <br />
+            
+            關於
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-archive fa-fw"></i> <br />
+            
+            歸檔
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-tags fa-fw"></i> <br />
+            
+            標籤
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                Docker 製作 NodeJS Image 的一些心得
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">發表於</span>
+            <time itemprop="dateCreated" datetime="2014-11-17T23:41:31+00:00" content="11月 17 2014">
+              11月 17 2014
+            </time>
+          </span>
+
+          
+
+          
+            
+              <span class="post-comments-count">
+                &nbsp; | &nbsp;
+                <a href="/2014/docker-nodejs-build-image-size/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2014/docker-nodejs-build-image-size/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+          
+          
+
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>最近在玩 Docker 來記錄一下製作 NodeJS Image 的過程…</p>
+<p>不囉嗦直接看 <strong>Dockerfile</strong></p>
+<a id="more"></a>
+<figure class="highlight dockerfile"><table><tr><td class="code"><pre><span class="line"><span class="keyword">FROM</span> docker pull dockerfile/nodejs</span><br><span class="line"></span><br><span class="line"><span class="keyword">MAINTAINER</span> Zack YL Shih &lt;zackyl.shih@moxa.com&gt;</span><br><span class="line"></span><br><span class="line"><span class="keyword">ADD</span> <span class="bash">. /data</span><br><span class="line"></span><span class="keyword">WORKDIR</span> <span class="bash">/data</span><br><span class="line"></span></span><br><span class="line"><span class="keyword">RUN</span> <span class="bash">npm install</span><br><span class="line"></span></span><br><span class="line"><span class="keyword">EXPOSE</span> <span class="number">8080</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">CMD</span> <span class="bash">npm start</span></span><br></pre></td></tr></table></figure>
+<p>我們會發現 Baseimage 搜尋 nodejs 會看到</p>
+<ol>
+<li><a href="https://registry.hub.docker.com/u/dockerfile/nodejs/" rel="external nofollow" target="_blank">dockerfile/nodejs</a></li>
+<li><a href="https://registry.hub.docker.com/u/library/node/" rel="external nofollow" target="_blank">node</a> <strong>Offical</strong></li>
+</ol>
+<p>一開始沒注意到直接用了 <code>dockerfile/nodejs</code> 沒啥大問題，執行起來一切正常唯一有問題的是 image 大小居然高達 <strong>8xx MB</strong>…</p>
+<h2 id="dockerfile-nodejs"><a href="#dockerfile-nodejs" class="headerlink" title="dockerfile/nodejs"></a>dockerfile/nodejs</h2><p>底下是他的 Dockerfile，就是去 Node 網站下載最新原始碼並且編譯 (所以需要 based on <code>dockerfile/python</code>)，不過這樣的後果是整個 image 無比肥大啊啊啊啊～</p>
+<figure class="highlight dockerfile"><table><tr><td class="code"><pre><span class="line"><span class="comment">#</span></span><br><span class="line"><span class="comment"># Node.js Dockerfile</span></span><br><span class="line"><span class="comment">#</span></span><br><span class="line"><span class="comment"># https://github.com/dockerfile/nodejs</span></span><br><span class="line"><span class="comment">#</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Pull base image.</span></span><br><span class="line"><span class="keyword">FROM</span> dockerfile/python</span><br><span class="line"></span><br><span class="line"><span class="comment"># Install Node.js</span></span><br><span class="line"><span class="keyword">RUN</span> <span class="bash">\</span><br><span class="line">  <span class="built_in">cd</span> /tmp &amp;&amp; \</span><br><span class="line">  wget http://nodejs.org/dist/node-latest.tar.gz &amp;&amp; \</span><br><span class="line">  tar xvzf node-latest.tar.gz &amp;&amp; \</span><br><span class="line">  rm <span class="_">-f</span> node-latest.tar.gz &amp;&amp; \</span><br><span class="line">  <span class="built_in">cd</span> node-v* &amp;&amp; \</span><br><span class="line">  ./configure &amp;&amp; \</span><br><span class="line">  CXX=<span class="string">"g++ -Wno-unused-local-typedefs"</span> make &amp;&amp; \</span><br><span class="line">  CXX=<span class="string">"g++ -Wno-unused-local-typedefs"</span> make install &amp;&amp; \</span><br><span class="line">  <span class="built_in">cd</span> /tmp &amp;&amp; \</span><br><span class="line">  rm -rf /tmp/node-v* &amp;&amp; \</span><br><span class="line">  <span class="built_in">echo</span> <span class="string">'\n# Node.js\nexport PATH="node_modules/.bin:$PATH"'</span> &gt;&gt; /root/.bashrc</span><br><span class="line"></span></span><br><span class="line"><span class="comment"># Define working directory.</span></span><br><span class="line"><span class="keyword">WORKDIR</span> <span class="bash">/data</span><br><span class="line"></span></span><br><span class="line"><span class="comment"># Define default command.</span></span><br><span class="line"><span class="keyword">CMD</span> <span class="bash">[<span class="string">"bash"</span>]</span></span><br></pre></td></tr></table></figure>
+<h2 id="Offical-Node"><a href="#Offical-Node" class="headerlink" title="Offical Node"></a>Offical Node</h2><p>後來改試了 Offical Node 這個 image …只剩下 <strong>38x MB</strong></p>
+<p>其實他有分很多等級的 <strong>tag</strong></p>
+<ul>
+<li>0.10.33, 0.10, 0, latest (0.10/Dockerfile)</li>
+<li>0.10.33-onbuild, 0.10-onbuild, 0-onbuild, onbuild (0.10/onbuild/Dockerfile)</li>
+<li>0.10.33-slim, 0.10-slim, 0-slim, <strong>slim</strong> (0.10/slim/Dockerfile)</li>
+<li>0.11.14, 0.11 (0.11/Dockerfile)</li>
+<li>0.11.14-onbuild, 0.11-onbuild (0.11/onbuild/Dockerfile)</li>
+<li>0.11.14-slim, 0.11-slim (0.11/slim/Dockerfile)</li>
+<li>0.8.28, 0.8 (0.8/Dockerfile)</li>
+<li>0.8.28-onbuild, 0.8-onbuild (0.8/onbuild/Dockerfile)</li>
+<li>0.8.28-slim, 0.8-slim (0.8/slim/Dockerfile)</li>
+</ul>
+<p>我這邊是直接使用 <strong>node:slim</strong> 因為我的 Application 沒有其他相依性問題要處理</p>
+<p><strong>但是！</strong>如果你的 <code>npm install</code> 需要一些 build-essential 以外的東西千萬要注意 <code>docker build</code> 的過程中有沒有噴錯，如果有錯的話…那還是要看你<strong>預先編譯好</strong>或是用<strong>空間</strong>來換了…</p>
+<p>這部分不知道有沒有更好的解法？</p>
+<p>下面是 <strong>slim</strong> 的 Dockerfile，可以看得出來他是直接下載 Binary 然後安裝…</p>
+<figure class="highlight dockerfile"><table><tr><td class="code"><pre><span class="line"><span class="keyword">FROM</span> debian:wheezy</span><br><span class="line"></span><br><span class="line"><span class="keyword">RUN</span> <span class="bash">apt-get update &amp;&amp; apt-get install -y --no-install-recommends \</span><br><span class="line">        ca-certificates \</span><br><span class="line">        curl \</span><br><span class="line">        build-essential \</span><br><span class="line">        pkg-config \</span><br><span class="line">        git \</span><br><span class="line">        python \</span><br><span class="line">    &amp;&amp; rm -rf /var/lib/apt/lists/*</span><br><span class="line"></span></span><br><span class="line"><span class="comment"># verify gpg and sha256: http://nodejs.org/dist/v0.10.31/SHASUMS256.txt.asc</span></span><br><span class="line"><span class="comment"># gpg: aka "Timothy J Fontaine (Work) &lt;tj.fontaine@joyent.com&gt;"</span></span><br><span class="line"><span class="keyword">RUN</span> <span class="bash">gpg --keyserver pgp.mit.edu --recv-keys 7937DFD2AB06298B2293C3187D33FF9D0246406D</span><br><span class="line"></span></span><br><span class="line"><span class="keyword">ENV</span> NODE_VERSION <span class="number">0.10</span>.<span class="number">33</span></span><br><span class="line"><span class="keyword">ENV</span> NPM_VERSION <span class="number">2.1</span>.<span class="number">8</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">RUN</span> <span class="bash">curl -SLO <span class="string">"http://nodejs.org/dist/v<span class="variable">$NODE_VERSION</span>/node-v<span class="variable">$NODE_VERSION</span>-linux-x64.tar.gz"</span> \</span><br><span class="line">    &amp;&amp; curl -SLO <span class="string">"http://nodejs.org/dist/v<span class="variable">$NODE_VERSION</span>/SHASUMS256.txt.asc"</span> \</span><br><span class="line">    &amp;&amp; gpg --verify SHASUMS256.txt.asc \</span><br><span class="line">    &amp;&amp; grep <span class="string">" node-v<span class="variable">$NODE_VERSION</span>-linux-x64.tar.gz\$"</span> SHASUMS256.txt.asc | sha256sum -c - \</span><br><span class="line">    &amp;&amp; tar -xzf <span class="string">"node-v<span class="variable">$NODE_VERSION</span>-linux-x64.tar.gz"</span> -C /usr/<span class="built_in">local</span> --strip-components=1 \</span><br><span class="line">    &amp;&amp; rm <span class="string">"node-v<span class="variable">$NODE_VERSION</span>-linux-x64.tar.gz"</span> SHASUMS256.txt.asc \</span><br><span class="line">    &amp;&amp; npm install -g npm@<span class="string">"<span class="variable">$NPM_VERSION</span>"</span> \</span><br><span class="line">    &amp;&amp; npm cache clear</span><br><span class="line"></span></span><br><span class="line"><span class="keyword">CMD</span> <span class="bash">[ <span class="string">"node"</span> ]</span></span><br></pre></td></tr></table></figure>
+<h2 id="Dockerfile-simple-web-application"><a href="#Dockerfile-simple-web-application" class="headerlink" title="Dockerfile (simple web application)"></a>Dockerfile (simple web application)</h2><p>最後看一下我的 Dockerfile，主要是啟動 <strong>mosca</strong> 搭配 static folder 掛載 <strong>Sanji MQTT Inspector</strong></p>
+<figure class="highlight dockerfile"><table><tr><td class="code"><pre><span class="line"><span class="keyword">FROM</span> node:slim</span><br><span class="line"></span><br><span class="line"><span class="keyword">MAINTAINER</span> Zack YL Shih &lt;zackyl.shih@moxa.com&gt;</span><br><span class="line"></span><br><span class="line"><span class="keyword">ADD</span> <span class="bash">. /data</span><br><span class="line"></span><span class="keyword">WORKDIR</span> <span class="bash">/data</span><br><span class="line"></span></span><br><span class="line"><span class="keyword">RUN</span> <span class="bash">npm install</span><br><span class="line"></span></span><br><span class="line"><span class="keyword">EXPOSE</span> <span class="number">8080</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">CMD</span> <span class="bash">npm start</span></span><br></pre></td></tr></table></figure>
+<p>把當前資料夾加入 <code>/data</code> 然後執行指令 <code>npm install</code>，並把 8080 port 暴露出去供其他 <strong>Container Linking</strong> 使用</p>
+<p>CMD 則直接執行預先寫好的 <code>npm start</code> 如下</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="meta">#!/bin/sh</span></span><br><span class="line">node_modules/mosca/bin/mosca -v --http-static . \</span><br><span class="line">    --http-port 8080 \</span><br><span class="line">    --parent-port <span class="variable">$BROKER_PORT_1883_TCP_PORT</span> \</span><br><span class="line">    --parent-host <span class="variable">$BROKER_PORT_1883_TCP_ADDR</span></span><br></pre></td></tr></table></figure>
+<p>其中環境變數 <code>$BROKER_PORT_1883_TCP_PORT</code> 與 <code>$BROKER_PORT_1883_TCP_ADDR</code>，是透過 <strong>fig.sh</strong> 建立起的連結將此 Container 跟 MQTT Broker 連接所產生的環境變數。這部分下篇文章再來介紹一下。</p>
+<p>Stay tuned…</p>
+
+      
+    </div>
+    
+    <div>
+      
+        
+      
+    </div>
+
+    <div>
+      
+        
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Docker/" rel="tag">#Docker</a>
+          
+            <a href="/tags/NodeJS/" rel="tag">#NodeJS</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2014/Agreeing-to-the-Xcode-license/" rel="next" title="Xcode 更新後不能編譯">
+                <i class="fa fa-chevron-left"></i> Xcode 更新後不能編譯
+              </a>
+            
+          </div>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2014/tmux-save-and-enlarge-screen-buffer/" rel="prev" title="加大 TMUX Buffer 與儲存目前視窗">
+                加大 TMUX Buffer 與儲存目前視窗 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目錄
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            本站概覽
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel ">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/default_avatar.jpg"
+               alt="YuLun Shih" />
+          <p class="site-author-name" itemprop="name">YuLun Shih</p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">66</span>
+              <span class="site-state-item-name">文章</span>
+            </a>
+          </div>
+
+          
+            <div class="site-state-item site-state-categories">
+              
+                <span class="site-state-item-count">6</span>
+                <span class="site-state-item-name">分類</span>
+              
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">122</span>
+                <span class="site-state-item-name">標籤</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+          <div class="cc-license motion-element" itemprop="license">
+            <a href="http://creativecommons.org/licenses/by-nc-sa/4.0" class="cc-opacity" target="_blank">
+              <img src="/images/cc-by-nc-sa.svg" alt="Creative Commons" />
+            </a>
+          </div>
+        
+
+        
+        
+
+      </section>
+
+      
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+            
+              
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#dockerfile-nodejs"><span class="nav-number">1.</span> <span class="nav-text">dockerfile/nodejs</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Offical-Node"><span class="nav-number">2.</span> <span class="nav-text">Offical Node</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Dockerfile-simple-web-application"><span class="nav-number">3.</span> <span class="nav-text">Dockerfile (simple web application)</span></a></li></ol></div>
+            
+          </div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2016</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">YuLun Shih</span>
+</div>
+
+<div class="powered-by">
+  由 <a class="theme-link" href="http://hexo.io">Hexo</a> 強力驅動
+</div>
+
+<div class="theme-info">
+  主題 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/vendors/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.0.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.0.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.0.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.0.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.0.1"></script>
+
+
+
+  
+
+
+
+  
+
+    <script type="text/javascript">
+      var disqus_shortname = 'zacksnote';
+      var disqus_identifier = '2014/docker-nodejs-build-image-size/';
+      var disqus_title = 'Docker 製作 NodeJS Image 的一些心得';
+      var disqus_url = 'http://yulun.me/2014/docker-nodejs-build-image-size/';
+
+      function run_disqus_script(disqus_script){
+        var dsq = document.createElement('script');
+        dsq.type = 'text/javascript';
+        dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+      }
+
+      run_disqus_script('count.js');
+      
+        run_disqus_script('embed.js');
+      
+    </script>
+  
+
+
+
+  
+  
+  
+
+  
+
+  
+
+</body>
+</html>

@@ -1,0 +1,677 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  <link href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css"/>
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+<link href="/vendors/font-awesome/css/font-awesome.min.css?v=4.4.0" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.0.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="AngularJS,parse.com,rest," />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="Somewhere I Belong" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.0.1" />
+
+
+
+
+
+
+<meta name="description" content="這幾天想搞一個簡單的應用，想說體驗一下 BaaS 的服務…看看是不是真的這麼方便易用？耳聞 Parse.com API 做得不錯，又被 Facebook 收購。想必應該品質有保證？讓我們繼續看下去…">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Parse.com REST API 搭配 Restangular">
+<meta property="og:url" content="http://yulun.me/2014/angularjs-restangular-parse-com-baas-service/index.html">
+<meta property="og:site_name" content="Somewhere I Belong">
+<meta property="og:description" content="這幾天想搞一個簡單的應用，想說體驗一下 BaaS 的服務…看看是不是真的這麼方便易用？耳聞 Parse.com API 做得不錯，又被 Facebook 收購。想必應該品質有保證？讓我們繼續看下去…">
+<meta property="og:updated_time" content="2016-04-28T16:57:13.066Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Parse.com REST API 搭配 Restangular">
+<meta name="twitter:description" content="這幾天想搞一個簡單的應用，想說體驗一下 BaaS 的服務…看看是不是真的這麼方便易用？耳聞 Parse.com API 做得不錯，又被 Facebook 收購。想必應該品質有保證？讓我們繼續看下去…">
+
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 0,
+      author: '博主'
+    }
+  };
+</script>
+
+  <title> Parse.com REST API 搭配 Restangular | Somewhere I Belong </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-tw">
+
+  
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-5959305-16', 'auto');
+  ga('send', 'pageview');
+</script>
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Somewhere I Belong</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+  <p class="site-subtitle">All about geek's life</p>
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-home fa-fw"></i> <br />
+            
+            首頁
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-projects">
+          <a href="/projects" rel="section">
+            
+              <i class="menu-item-icon fa fa-question-circle fa-fw"></i> <br />
+            
+            開源專案
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-user fa-fw"></i> <br />
+            
+            關於
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-archive fa-fw"></i> <br />
+            
+            歸檔
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-tags fa-fw"></i> <br />
+            
+            標籤
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                Parse.com REST API 搭配 Restangular
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">發表於</span>
+            <time itemprop="dateCreated" datetime="2014-08-04T00:14:16+00:00" content="8月 4 2014">
+              8月 4 2014
+            </time>
+          </span>
+
+          
+
+          
+            
+              <span class="post-comments-count">
+                &nbsp; | &nbsp;
+                <a href="/2014/angularjs-restangular-parse-com-baas-service/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2014/angularjs-restangular-parse-com-baas-service/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+          
+          
+
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>這幾天想搞一個簡單的應用，想說體驗一下 BaaS 的服務…看看是不是真的這麼方便易用？耳聞 Parse.com API 做得不錯，又被 Facebook 收購。想必應該品質有保證？讓我們繼續看下去…</p>
+<a id="more"></a>
+<p>對了，我選擇 Parse 的原因之一就是他有一個漂亮的後台，<code>Analytics</code>, <code>Data Browser</code>…集成的 Dashboard！這對於一個實驗性 Prototype 的產品來說，不用花精神去額外寫一個後台可以省去不少時間！(當然，phpmyadmin 也不是不行啦…)</p>
+<h2 id="JavaScript-SDK-or-REST-API"><a href="#JavaScript-SDK-or-REST-API" class="headerlink" title="JavaScript SDK or REST API"></a>JavaScript SDK or REST API</h2><p>回歸正題，由於我是用 AngularJS 所以一開始就面臨兩個抉擇：</p>
+<ol>
+<li>JavaScript SDK</li>
+<li>REST API</li>
+</ol>
+<p>首先我先試了 <a href="https://www.parse.com/docs/js_guide" rel="external nofollow" target="_blank">JavaScript SDK</a> (真是個錯誤的開始…)</p>
+<p>文件其實還算詳細，Parse.Object 主要是透過 Backbone 的 model/collection 來操控，如果之前有接觸擴 <a href="http://backbonejs.org" rel="external nofollow" target="_blank">Backbone.js</a>，我想 JS SDK 應該非常適合你使用，前提是不要跟 AngularJS 搭在一起…</p>
+<p>AngularJS 的 data-binding 是透過例如說</p>
+<figure class="highlight js"><table><tr><td class="code"><pre><span class="line"><span class="keyword">var</span> model = &#123;</span><br><span class="line">  name: <span class="string">"zack"</span>,</span><br><span class="line">  age: <span class="number">18</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>不需要像 backbone’s style 假如我要取得 model 的 properties 要使用 getter <code>model.get(&quot;name&quot;)</code>，雖然可以透過 <code>.toJSON()</code> 轉換但是就無法 <strong>two-way binding</strong>…</p>
+<p>總之這個搭配十分有問題阿~ (AngularJS + Parse.com JS SDK)；在官方論壇上有看到幾個 JS SDK 跟 AngularJS 搭配的範例，總覺得還是很髒很麻煩！有興趣可以研究看看</p>
+<ol>
+<li><a href="https://github.com/brandid/parse-angular-demo" rel="external nofollow" target="_blank">parse-angular-demo</a></li>
+<li><a href="http://www.jonathanbroquist.com/integrating-parse-data-with-ng-model-in-angularjs/" rel="external nofollow" target="_blank">Integrating Parse Data with ng-model in AngularJS</a></li>
+</ol>
+<p>ps. 第二個作者他自己也說他沒用這種方式了</p>
+<p>於是在我花了一點時間把玩了 JS SDK with AngularJS 後，決定奔向 REST API 懷抱，不要用他的 JS SDK 了。</p>
+<h2 id="Restangular-with-REST-API"><a href="#Restangular-with-REST-API" class="headerlink" title="Restangular with REST API"></a>Restangular with REST API</h2><p>在 AngularJS 中要存取 RESTful-like 的 API 除了直接用 <code>$resource</code> 外，大概就是用阿根廷的開發者 <a href="https://github.com/mgonto" rel="external nofollow" target="_blank">Martin Gontovnikas</a> 的 <a href="https://github.com/mgonto/restangular" rel="external nofollow" target="_blank">Restangular</a> 了吧！</p>
+<blockquote>
+<p>AngularJS service to handle Rest API Restful Resources properly and easily</p>
+</blockquote>
+<p>於是我開始串 REST API，發現還真的是滿方便的！</p>
+<p>Parse 的 REST API 需要在每次送出 request 的時候在 header 中夾帶你的資料，因此我們可以在 AngularJS 中的設定如下</p>
+<figure class="highlight js"><table><tr><td class="code"><pre><span class="line">angular.module(<span class="string">'app'</span>, [<span class="string">'restangular'</span><span class="comment">/*, others*/</span>])</span><br><span class="line">.config(<span class="function"><span class="keyword">function</span>(<span class="params">RestangularProvider <span class="comment">/*, others*/</span></span>) </span>&#123;</span><br><span class="line">  RestangularProvider.setBaseUrl(<span class="string">'https://api.parse.com/1/classes/'</span>);</span><br><span class="line">  RestangularProvider.setDefaultHeaders(&#123;</span><br><span class="line">    <span class="string">"X-Parse-Application-Id"</span>: <span class="string">"YOUR_APPLICATION_ID"</span>,</span><br><span class="line">    <span class="string">"X-Parse-REST-API-Key"</span>: <span class="string">"YOUR_REST_API_KEY"</span></span><br><span class="line">  &#125;);</span><br><span class="line">  RestangularProvider.setRestangularFields(&#123;id: <span class="string">"objectId"</span>&#125;);</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>透過上述設定，Restangular 就會在每次發送 request 的時候幫你把 header 設定好！</p>
+<p>一開始我們要先設定 API Base Url，<code>RestangularProvider.setBaseUrl(&#39;https://api.parse.com/1/classes/&#39;);</code>，將來若 API 版本或是 endpoint 有變只要更改此處即可。</p>
+<p>再來可以看到下面有一行 <code>setRestangularFields({id: &quot;objectId&quot;});</code> ，這一行是因為 Restangular 預設將取回來的物件中的 <code>id</code> 這個屬性拿出來將來若你要針對這個物件做 <code>PUT/UPDATE/DELETE</code> 等動作的時候，它會自動幫你從原本的 <code>/collection</code> 變成 <code>/collection/{id}</code>。</p>
+<p>然而，Parse 的物件並不是存成 <code>id</code> 而是叫做 <code>objectId</code> 因此我們必須在此手動設定 <code>{id: &quot;objectId&quot;}</code></p>
+<h2 id="Examples"><a href="#Examples" class="headerlink" title="Examples"></a>Examples</h2><p>透過一些程式碼應該可以比較快速上手</p>
+<h1 id="取得一個-Object"><a href="#取得一個-Object" class="headerlink" title="取得一個 Object"></a>取得一個 Object</h1><p><strong>one(route, id)</strong></p>
+<figure class="highlight js"><table><tr><td class="code"><pre><span class="line"><span class="keyword">var</span> id = <span class="number">1</span>;</span><br><span class="line"><span class="keyword">var</span> Event = Restangular.one(<span class="string">'Events'</span>, id);</span><br><span class="line"></span><br><span class="line">Event.get(&#123;include: <span class="string">'brand'</span>&#125;).then(<span class="function"><span class="keyword">function</span>(<span class="params">event</span>) </span>&#123;</span><br><span class="line">  $scope.event = event;</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+<p>由於先前有設定過 Base API 所以這邊的 <code>route = &#39;Events&#39;</code> 實際上是會對 <code>https://api.parse.com/1/classes/Events</code> 做存取。Restangular 有使用 <strong>promise</strong> 所以我們可以使用 <code>.then()</code> 來執行取得資料後的操作。在上面程式碼當中，取得了 objectId 為 1 的 Event 並且指定給 <code>$scope.event</code></p>
+<p>其中 <code>.get({include: &#39;brand&#39;})</code> 則表示送出的 param 為 <code>Events?include=brand</code>。這邊目的是希望我們要連帶取得 Event 底下的 brand 資料，此部分請參考 Parse 的 REST API Document。</p>
+<h1 id="新增一個-Object"><a href="#新增一個-Object" class="headerlink" title="新增一個 Object"></a>新增一個 Object</h1><p><strong>all(route)</strong>: This will create a new Restangular object that is just a pointer to a list of elements for the specified path.<br><strong>post(subElement, elementToPost, [queryParams, headers])</strong></p>
+<figure class="highlight js"><table><tr><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">var</span> Comments = Restangular.all(<span class="string">'Comments'</span>);</span><br><span class="line"></span><br><span class="line"><span class="keyword">var</span> event = &#123;</span><br><span class="line">  name: <span class="string">'test'</span>,</span><br><span class="line">  objectId: <span class="number">1</span></span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="keyword">var</span> comment = &#123;</span><br><span class="line">  name: <span class="string">'nickname'</span>,</span><br><span class="line">  conetnt: <span class="string">'test comment'</span></span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">Comments.post(&#123;</span><br><span class="line">  event: &#123; <span class="comment">// 此處是新增一個 Pointer 類型的 Event 資料 (詳見 API DOC)</span></span><br><span class="line">    __type: <span class="string">'Pointer'</span>,</span><br><span class="line">    className: <span class="string">'Events'</span>,</span><br><span class="line">    objectId: event.objectId</span><br><span class="line">  &#125;,</span><br><span class="line">  name: comment.name,</span><br><span class="line">  content: comment.content</span><br><span class="line">&#125;).then(<span class="function"><span class="keyword">function</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">  <span class="built_in">console</span>.log(<span class="string">'success'</span>); <span class="comment">// 成功</span></span><br><span class="line">&#125;, <span class="function"><span class="keyword">function</span>(<span class="params">error</span>) </span>&#123;</span><br><span class="line">  <span class="built_in">console</span>.log(error); <span class="comment">// 失敗</span></span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+<p>可以看到 <code>Restangular.all(&#39;Comments&#39;)</code> 就代表 <code>API_BASE + &#39;/&#39; + &#39;Comments&#39;</code> 有所有的 Comments 集合。</p>
+<p>在上面的程式當中，我想要新增一個 Class 為 <code>Comment</code> 的物件，並且將它其中一個 Pointer 欄位指向某一個 <code>Event</code>。</p>
+<p><code>.post</code> 完之後會返回一個 Promise 可以接續後續的流程。</p>
+<p>以上，我想就可以輕鬆使用 AngularJS + Restangular CRUD 在 Parse.com 平台啦！</p>
+
+      
+    </div>
+    
+    <div>
+      
+        
+      
+    </div>
+
+    <div>
+      
+        
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/AngularJS/" rel="tag">#AngularJS</a>
+          
+            <a href="/tags/parse-com/" rel="tag">#parse.com</a>
+          
+            <a href="/tags/rest/" rel="tag">#rest</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2014/delete-all-your-tweets-twitter/" rel="next" title="刪除 Twitter 所有 Tweets (Python)">
+                <i class="fa fa-chevron-left"></i> 刪除 Twitter 所有 Tweets (Python)
+              </a>
+            
+          </div>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2014/Internet-Relay-Chat-IRC/" rel="prev" title="IRC 與開發者直接互動">
+                IRC 與開發者直接互動 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目錄
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            本站概覽
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel ">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/default_avatar.jpg"
+               alt="YuLun Shih" />
+          <p class="site-author-name" itemprop="name">YuLun Shih</p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">66</span>
+              <span class="site-state-item-name">文章</span>
+            </a>
+          </div>
+
+          
+            <div class="site-state-item site-state-categories">
+              
+                <span class="site-state-item-count">6</span>
+                <span class="site-state-item-name">分類</span>
+              
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">122</span>
+                <span class="site-state-item-name">標籤</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+          <div class="cc-license motion-element" itemprop="license">
+            <a href="http://creativecommons.org/licenses/by-nc-sa/4.0" class="cc-opacity" target="_blank">
+              <img src="/images/cc-by-nc-sa.svg" alt="Creative Commons" />
+            </a>
+          </div>
+        
+
+        
+        
+
+      </section>
+
+      
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+            
+              
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#JavaScript-SDK-or-REST-API"><span class="nav-number">1.</span> <span class="nav-text">JavaScript SDK or REST API</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Restangular-with-REST-API"><span class="nav-number">2.</span> <span class="nav-text">Restangular with REST API</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Examples"><span class="nav-number">3.</span> <span class="nav-text">Examples</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#取得一個-Object"><span class="nav-number"></span> <span class="nav-text">取得一個 Object</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#新增一個-Object"><span class="nav-number"></span> <span class="nav-text">新增一個 Object</span></a></div>
+            
+          </div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2016</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">YuLun Shih</span>
+</div>
+
+<div class="powered-by">
+  由 <a class="theme-link" href="http://hexo.io">Hexo</a> 強力驅動
+</div>
+
+<div class="theme-info">
+  主題 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/vendors/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.0.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.0.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.0.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.0.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.0.1"></script>
+
+
+
+  
+
+
+
+  
+
+    <script type="text/javascript">
+      var disqus_shortname = 'zacksnote';
+      var disqus_identifier = '2014/angularjs-restangular-parse-com-baas-service/';
+      var disqus_title = 'Parse.com REST API 搭配 Restangular';
+      var disqus_url = 'http://yulun.me/2014/angularjs-restangular-parse-com-baas-service/';
+
+      function run_disqus_script(disqus_script){
+        var dsq = document.createElement('script');
+        dsq.type = 'text/javascript';
+        dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+      }
+
+      run_disqus_script('count.js');
+      
+        run_disqus_script('embed.js');
+      
+    </script>
+  
+
+
+
+  
+  
+  
+
+  
+
+  
+
+</body>
+</html>

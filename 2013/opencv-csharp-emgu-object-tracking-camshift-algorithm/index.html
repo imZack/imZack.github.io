@@ -1,0 +1,675 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  <link href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css"/>
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+<link href="/vendors/font-awesome/css/font-awesome.min.css?v=4.4.0" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.0.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="C#,Emgu,影像處理," />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="Somewhere I Belong" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.0.1" />
+
+
+
+
+
+
+<meta name="description" content="這學期擔任影像處理助教，所以要出作業給學弟妹練習一下 OpenCV會使用 Emgu 不外乎是環境好建置，只要把將範例專案做好基本上下載回去能馬上使用可以專心在撰寫功能不需要去建置環境，雖然說建置環境對一個工程師也是一項基本功啦…">
+<meta property="og:type" content="article">
+<meta property="og:title" content="OpenCV (C# Emgu) 物件追蹤程式，使用 Camshift 演算法">
+<meta property="og:url" content="http://yulun.me/2013/opencv-csharp-emgu-object-tracking-camshift-algorithm/index.html">
+<meta property="og:site_name" content="Somewhere I Belong">
+<meta property="og:description" content="這學期擔任影像處理助教，所以要出作業給學弟妹練習一下 OpenCV會使用 Emgu 不外乎是環境好建置，只要把將範例專案做好基本上下載回去能馬上使用可以專心在撰寫功能不需要去建置環境，雖然說建置環境對一個工程師也是一項基本功啦…">
+<meta property="og:updated_time" content="2016-04-28T16:57:13.070Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="OpenCV (C# Emgu) 物件追蹤程式，使用 Camshift 演算法">
+<meta name="twitter:description" content="這學期擔任影像處理助教，所以要出作業給學弟妹練習一下 OpenCV會使用 Emgu 不外乎是環境好建置，只要把將範例專案做好基本上下載回去能馬上使用可以專心在撰寫功能不需要去建置環境，雖然說建置環境對一個工程師也是一項基本功啦…">
+
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 0,
+      author: '博主'
+    }
+  };
+</script>
+
+  <title> OpenCV (C# Emgu) 物件追蹤程式，使用 Camshift 演算法 | Somewhere I Belong </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-tw">
+
+  
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-5959305-16', 'auto');
+  ga('send', 'pageview');
+</script>
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Somewhere I Belong</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+  <p class="site-subtitle">All about geek's life</p>
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-home fa-fw"></i> <br />
+            
+            首頁
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-projects">
+          <a href="/projects" rel="section">
+            
+              <i class="menu-item-icon fa fa-question-circle fa-fw"></i> <br />
+            
+            開源專案
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-user fa-fw"></i> <br />
+            
+            關於
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-archive fa-fw"></i> <br />
+            
+            歸檔
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-tags fa-fw"></i> <br />
+            
+            標籤
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                OpenCV (C# Emgu) 物件追蹤程式，使用 Camshift 演算法
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">發表於</span>
+            <time itemprop="dateCreated" datetime="2013-05-26T13:50:26+00:00" content="5月 26 2013">
+              5月 26 2013
+            </time>
+          </span>
+
+          
+            <span class="post-category" >
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分類於</span>
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <a href="/categories/C/" itemprop="url" rel="index">
+                    <span itemprop="name">C#</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <a href="/categories/C/影像處理/" itemprop="url" rel="index">
+                    <span itemprop="name">影像處理</span>
+                  </a>
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                &nbsp; | &nbsp;
+                <a href="/2013/opencv-csharp-emgu-object-tracking-camshift-algorithm/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2013/opencv-csharp-emgu-object-tracking-camshift-algorithm/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+          
+          
+
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>這學期擔任影像處理助教，所以要出作業給學弟妹練習一下 <strong>OpenCV</strong><br>會使用 <strong>Emgu</strong> 不外乎是<strong>環境好建置</strong>，只要把將範例專案做好基本上下載回去能馬上使用<br>可以專心在撰寫功能不需要去建置環境，雖然說建置環境對一個工程師也是一項基本功啦…</p>
+<a id="more"></a>
+<p>首先先來搞清楚一下整個物件追蹤的來龍去脈…</p>
+<h2 id="整個流程"><a href="#整個流程" class="headerlink" title="整個流程"></a>整個流程</h2><p>1. 畫面上選取要追蹤的區域這裡我稱為 <strong>物件 (Object)</strong>，也就是要被追蹤的東東<br>2. 計算出物件的 <strong>直方圖 (<a href="http://en.wikipedia.org/wiki/Histogram" rel="external nofollow" target="_blank">Histogram</a>)</strong><br>3. 將物件的直方圖與輸入畫面進行 <strong>反向投影(<a href="http://docs.opencv.org/doc/tutorials/imgproc/histograms/back_projection/back_projection.html" rel="external nofollow" target="_blank">Backproject</a>)</strong> 計算<br>4. 透過 <strong>物件追蹤演算法(Camshift)</strong> 快速地框出反向投影計算出的結果<br>5. 回傳追蹤區域<br>於是一直重複 3~5 的過程，我們的物件追蹤程式就大功告成了！</p>
+<p>&nbsp;</p>
+<h2 id="範例專案-ObjectTracking-cs"><a href="#範例專案-ObjectTracking-cs" class="headerlink" title="範例專案 ObjectTracking.cs"></a>範例專案 <a href="https://github.com/imZack/Digital-Image-Processing-2/blob/master/ObjectTracking.cs" rel="external nofollow" target="_blank">ObjectTracking.cs</a></h2><h3 id="先宣告所有變數"><a href="#先宣告所有變數" class="headerlink" title="先宣告所有變數"></a>先宣告所有變數</h3><figure class="highlight csharp"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> Image&amp;lt;hsv, <span class="keyword">byte</span>=<span class="string">""</span>&amp;gt; hsv;</span><br><span class="line"><span class="keyword">public</span> Image&amp;lt;gray, <span class="keyword">byte</span>=<span class="string">""</span>&amp;gt; hue;</span><br><span class="line"><span class="keyword">public</span> Image&amp;lt;gray, <span class="keyword">byte</span>=<span class="string">""</span>&amp;gt; mask;</span><br><span class="line"><span class="keyword">public</span> Image&amp;lt;gray, <span class="keyword">byte</span>=<span class="string">""</span>&amp;gt; backproject;</span><br><span class="line"><span class="keyword">public</span> DenseHistogram hist;</span><br><span class="line"><span class="keyword">private</span> Rectangle trackingWindow;</span><br><span class="line"><span class="keyword">private</span> MCvConnectedComp trackcomp;</span><br><span class="line"><span class="keyword">private</span> MCvBox2D trackbox;</span><br></pre></td></tr></table></figure>
+<h3 id="建構子"><a href="#建構子" class="headerlink" title="建構子"></a>建構子</h3><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">public ObjectTracking(Image&amp;lt;Bgr, Byte&amp;gt; image, Rectangle ROI)</span><br><span class="line">&#123;</span><br><span class="line">    // Initialize parameters</span><br><span class="line">    trackbox = new MCvBox2D();</span><br><span class="line">    trackcomp = new MCvConnectedComp();</span><br><span class="line">    hue = new Image&amp;lt;Gray, byte&amp;gt;(image.Width, image.Height);</span><br><span class="line">    hue._EqualizeHist();</span><br><span class="line">    mask = new Image&amp;lt;Gray, byte&amp;gt;(image.Width, image.Height);</span><br><span class="line">    hist = new DenseHistogram(30, new RangeF(0, 180));</span><br><span class="line">    backproject = new Image&amp;lt;Gray, byte&amp;gt;(image.Width, image.Height);</span><br><span class="line"></span><br><span class="line">    // Assign Object&apos;s ROI from source image.</span><br><span class="line">    trackingWindow = ROI;</span><br><span class="line"></span><br><span class="line">    // Producing Object&apos;s hist</span><br><span class="line">    CalObjectHist(image);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="更新-HUE-畫面"><a href="#更新-HUE-畫面" class="headerlink" title="更新 HUE 畫面"></a>更新 HUE 畫面</h3><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">private void UpdateHue(Image&amp;lt;Bgr, Byte&amp;gt; image)</span><br><span class="line">&#123;</span><br><span class="line">    // release previous image memory</span><br><span class="line">    if (hsv != null)    hsv.Dispose();</span><br><span class="line">    hsv = image.Convert&amp;lt;Hsv, Byte&amp;gt;();</span><br><span class="line"></span><br><span class="line">    // Drop low saturation pixels</span><br><span class="line">    mask = hsv.Split()[1].ThresholdBinary(new Gray(60), new Gray(255));</span><br><span class="line">    CvInvoke.cvInRangeS(hsv, new MCvScalar(0, 30, Math.Min(10, 255), 0),</span><br><span class="line">        new MCvScalar(180, 256, Math.Max(10, 255), 0), mask);</span><br><span class="line"></span><br><span class="line">    // Get Hue</span><br><span class="line">    hue = hsv.Split()[0];</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="計算物件直方圖"><a href="#計算物件直方圖" class="headerlink" title="計算物件直方圖"></a>計算物件直方圖</h3><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">private void CalObjectHist(Image&amp;lt;Bgr, Byte&amp;gt; image)</span><br><span class="line">&#123;</span><br><span class="line">    UpdateHue(image);</span><br><span class="line"></span><br><span class="line">    // Set tracking object&apos;s ROI</span><br><span class="line">    hue.ROI = trackingWindow;</span><br><span class="line">    mask.ROI = trackingWindow;</span><br><span class="line">    hist.Calculate(new Image&amp;lt;Gray, Byte&amp;gt;[] &#123; hue &#125;, false, mask);</span><br><span class="line"></span><br><span class="line">    // Scale Historgram</span><br><span class="line">    float max=0, min=0, scale=0;</span><br><span class="line">    int[] minLocations, maxLocations;</span><br><span class="line">    hist.MinMax(out min, out max, out minLocations, out maxLocations);</span><br><span class="line">    if (max != 0)</span><br><span class="line">    &#123;</span><br><span class="line">        scale = 255 / max;</span><br><span class="line">    &#125;</span><br><span class="line">    CvInvoke.cvConvertScale(hist.MCvHistogram.bins, hist.MCvHistogram.bins, scale, 0);</span><br><span class="line"></span><br><span class="line">    // Clear ROI</span><br><span class="line">    hue.ROI = System.Drawing.Rectangle.Empty;</span><br><span class="line">    mask.ROI = System.Drawing.Rectangle.Empty;</span><br><span class="line"></span><br><span class="line">    // Now we have Object&apos;s Histogram, called hist.</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="執行追蹤"><a href="#執行追蹤" class="headerlink" title="執行追蹤"></a>執行追蹤</h3><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">public Rectangle Tracking(Image&amp;lt;Bgr, Byte&amp;gt; image)</span><br><span class="line">&#123;</span><br><span class="line">    UpdateHue(image);</span><br><span class="line"></span><br><span class="line">    // Calucate BackProject</span><br><span class="line">    backproject = hist.BackProject(new Image&amp;lt;Gray, Byte&amp;gt;[] &#123; hue &#125;);</span><br><span class="line"></span><br><span class="line">    // Apply mask</span><br><span class="line">    backproject._And(mask);</span><br><span class="line"></span><br><span class="line">    // Tracking windows empty means camshift lost bounding-box last time</span><br><span class="line">    // here we give camshift a new start window from 0,0 (you could change it)</span><br><span class="line">    if (trackingWindow.IsEmpty || trackingWindow.Width==0 || trackingWindow.Height==0)</span><br><span class="line">    &#123;</span><br><span class="line">        trackingWindow = new Rectangle(0, 0, 100, 100);</span><br><span class="line">    &#125;</span><br><span class="line">    CvInvoke.cvCamShift(backproject, trackingWindow,</span><br><span class="line">        new MCvTermCriteria(10, 1), out trackcomp, out trackbox);</span><br><span class="line"></span><br><span class="line">    // update tracking window</span><br><span class="line">    trackingWindow = trackcomp.rect;</span><br><span class="line"></span><br><span class="line">    return trackingWindow;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<iframe width="640" height="480" src="https://www.youtube-nocookie.com/embed/RavZvuspQks?rel=0" frameborder="0" allowfullscreen></iframe>
+
+<p>完整範例專案放置於 <a href="https://github.com/imZack/Digital-Image-Processing-2" title="Digital-Image-Processing-2" rel="external nofollow" target="_blank">Github </a></p>
+
+      
+    </div>
+    
+    <div>
+      
+        
+      
+    </div>
+
+    <div>
+      
+        
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/C/" rel="tag">#C#</a>
+          
+            <a href="/tags/Emgu/" rel="tag">#Emgu</a>
+          
+            <a href="/tags/影像處理/" rel="tag">#影像處理</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+          </div>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2013/setup-vsftpd-for-upload-homework-on-ubuntu/" rel="prev" title="用 vsFTPd 架設作業上傳環境 (以 Ubuntu 為例)">
+                用 vsFTPd 架設作業上傳環境 (以 Ubuntu 為例) <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目錄
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            本站概覽
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel ">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/default_avatar.jpg"
+               alt="YuLun Shih" />
+          <p class="site-author-name" itemprop="name">YuLun Shih</p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">66</span>
+              <span class="site-state-item-name">文章</span>
+            </a>
+          </div>
+
+          
+            <div class="site-state-item site-state-categories">
+              
+                <span class="site-state-item-count">6</span>
+                <span class="site-state-item-name">分類</span>
+              
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">122</span>
+                <span class="site-state-item-name">標籤</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+          <div class="cc-license motion-element" itemprop="license">
+            <a href="http://creativecommons.org/licenses/by-nc-sa/4.0" class="cc-opacity" target="_blank">
+              <img src="/images/cc-by-nc-sa.svg" alt="Creative Commons" />
+            </a>
+          </div>
+        
+
+        
+        
+
+      </section>
+
+      
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+            
+              
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#整個流程"><span class="nav-number">1.</span> <span class="nav-text">整個流程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#範例專案-ObjectTracking-cs"><span class="nav-number">2.</span> <span class="nav-text">範例專案 ObjectTracking.cs</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#先宣告所有變數"><span class="nav-number">2.1.</span> <span class="nav-text">先宣告所有變數</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#建構子"><span class="nav-number">2.2.</span> <span class="nav-text">建構子</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#更新-HUE-畫面"><span class="nav-number">2.3.</span> <span class="nav-text">更新 HUE 畫面</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#計算物件直方圖"><span class="nav-number">2.4.</span> <span class="nav-text">計算物件直方圖</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#執行追蹤"><span class="nav-number">2.5.</span> <span class="nav-text">執行追蹤</span></a></li></ol></li></ol></div>
+            
+          </div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2016</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">YuLun Shih</span>
+</div>
+
+<div class="powered-by">
+  由 <a class="theme-link" href="http://hexo.io">Hexo</a> 強力驅動
+</div>
+
+<div class="theme-info">
+  主題 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/vendors/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.0.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.0.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.0.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.0.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.0.1"></script>
+
+
+
+  
+
+
+
+  
+
+    <script type="text/javascript">
+      var disqus_shortname = 'zacksnote';
+      var disqus_identifier = '2013/opencv-csharp-emgu-object-tracking-camshift-algorithm/';
+      var disqus_title = 'OpenCV (C# Emgu) 物件追蹤程式，使用 Camshift 演算法';
+      var disqus_url = 'http://yulun.me/2013/opencv-csharp-emgu-object-tracking-camshift-algorithm/';
+
+      function run_disqus_script(disqus_script){
+        var dsq = document.createElement('script');
+        dsq.type = 'text/javascript';
+        dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+      }
+
+      run_disqus_script('count.js');
+      
+        run_disqus_script('embed.js');
+      
+    </script>
+  
+
+
+
+  
+  
+  
+
+  
+
+  
+
+</body>
+</html>

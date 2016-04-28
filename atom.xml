@@ -1,0 +1,1022 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Somewhere I Belong</title>
+  <subtitle>All about geek&#39;s life</subtitle>
+  <link href="/atom.xml" rel="self"/>
+  
+  <link href="http://yulun.me/"/>
+  <updated>2016-04-28T16:57:13.070Z</updated>
+  <id>http://yulun.me/</id>
+  
+  <author>
+    <name>YuLun Shih</name>
+    <email>shih@yulun.me</email>
+  </author>
+  
+  <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>Python 2.7 Threading / Queue 的 timeout 問題</title>
+    <link href="http://yulun.me/2016/python2-threading-queue-timeout-monotonic/"/>
+    <id>http://yulun.me/2016/python2-threading-queue-timeout-monotonic/</id>
+    <published>2016-04-29T00:21:59.000Z</published>
+    <updated>2016-04-28T16:57:13.070Z</updated>
+    
+    <content type="html">&lt;p&gt;最近遇到一個很坑的問題…&lt;/p&gt;
+&lt;p&gt;那就是系統時間只要 &lt;strong&gt;倒退嚕&lt;/strong&gt; 某些 Python thread 就會卡住 (其實不是卡住)&lt;/p&gt;
+&lt;p&gt;我們都知道系統時間是有可能會改變的 (藉由 NTP, 基地台校時, 手動, 等方式)，但是很多程式的 timeout 相關機制設計是有缺陷的。舉個例子：一個 10 秒的 timeout 可以寫成 &lt;code&gt;起始系統時間 - 現在系統時間 &amp;gt;= 10&lt;/code&gt; 就執行&lt;/p&gt;
+&lt;p&gt;淺而易見地，如果今天時間回溯如：2016 調整到 2000，那這樣這個 timeout 要等 &lt;strong&gt;16 年&lt;/strong&gt; 才會觸發…&lt;/p&gt;
+&lt;p&gt;所以通常，有幾種做法：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;p&gt;使用 monotonic time&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;The kernel call for time functions. Using CLOCK_MONOTONIC is typically better than using CLOCK_REALTIME because the monotonic clock is always increasing, so you don’t have to worry about someone’s changing the clock.&lt;br&gt;ref: &lt;a href=&quot;http://www.qnx.com/developers/docs/6.4.1/neutrino/technotes/time.html&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;http://www.qnx.com/developers/docs/6.4.1/neutrino/technotes/time.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;取兩個時間相減後的絕對值 (缺點：並非真正的 timeout 時間，但可以抵抗系統時間往前。如果你沒辦法取得 monotonic time 也許也是一個方式)&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;在 Python 世界中，一直到 &lt;a href=&quot;https://www.python.org/dev/peps/pep-0418/&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;PEP 418 – Add monotonic time, performance counter, and process time functions&lt;/a&gt;，規範 stdlib monotonic time 的機制。(可能是考量到跨平台與可移植性…所以直到 2012 才加入這個功能)&lt;/p&gt;
+&lt;p&gt;Anyway, Python 2.7 中，&lt;code&gt;Queue.get()&lt;/code&gt;, 以及 &lt;code&gt;threading.condition&lt;/code&gt; 中都使用了 &lt;code&gt;time.time()&lt;/code&gt; 來判斷 timeout，如此一來只要使用者不慎將時間往回調你的程式行為可能就不如預期。&lt;br&gt;(題外話：系統時間大幅度往前實際上是很少發生的，也應該要被避免。因為其他背景執行程式如何實作 timeout? 或是其他功能可能會有預期外的行為發生。)&lt;/p&gt;
+&lt;p&gt;可以看一下 Python 2.7 source code 其中的 &lt;code&gt;_time()&lt;/code&gt; 是 &lt;code&gt;time.time()&lt;/code&gt;，所以可以明顯地看出如果系統時間往回調，這邊的 &lt;code&gt;threading.condition.wait()&lt;/code&gt; 會行為異常。&lt;/p&gt;
+&lt;figure class=&quot;highlight py&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;endtime = _time() + timeout&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;delay = &lt;span class=&quot;number&quot;&gt;0.0005&lt;/span&gt; &lt;span class=&quot;comment&quot;&gt;# 500 us -&amp;gt; initial delay of 1 ms&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;while&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;True&lt;/span&gt;:&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    gotit = waiter.acquire(&lt;span class=&quot;number&quot;&gt;0&lt;/span&gt;)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    &lt;span class=&quot;keyword&quot;&gt;if&lt;/span&gt; gotit:&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;        &lt;span class=&quot;keyword&quot;&gt;break&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    remaining = endtime - _time()&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    &lt;span class=&quot;keyword&quot;&gt;if&lt;/span&gt; remaining &amp;lt;= &lt;span class=&quot;number&quot;&gt;0&lt;/span&gt;:&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;        &lt;span class=&quot;keyword&quot;&gt;break&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    delay = min(delay * &lt;span class=&quot;number&quot;&gt;2&lt;/span&gt;, remaining, &lt;span class=&quot;number&quot;&gt;.05&lt;/span&gt;)&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;blockquote&gt;
+&lt;p&gt;以上取自 &lt;a href=&quot;https://github.com/python/cpython/blob/2.7/Lib/threading.py#L349-L358&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;https://github.com/python/cpython/blob/2.7/Lib/threading.py#L349-L358&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;像這樣的例子在 Python code base 還有很多，詳細請見這個 patch 將所有 timeout 全部替換成使用 monotonic 來計算&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;patches: &lt;a href=&quot;http://bugs.python.org/review/22043&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;http://bugs.python.org/review/22043&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;issue: &lt;a href=&quot;http://bugs.python.org/issue22043&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;http://bugs.python.org/issue22043&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;最後補上一些前人的痛：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://bugs.python.org/issue1508864&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;threading.Timer/timeouts break on change of win32 local time
+&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;http://ephrain.pixnet.net/blog/post/62284744&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;[Python] Debug python 程式 hang 在 Queue.get() 的問題
+&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;最後我想說：&lt;strong&gt;Let’s upgrade to Python 3.5!&lt;/strong&gt;&lt;/p&gt;
+</content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;最近遇到一個很坑的問題…&lt;/p&gt;
+&lt;p&gt;那就是系統時間只要 &lt;strong&gt;倒退嚕&lt;/strong&gt; 某些 Python thread 就會卡住 (其實不是卡住)&lt;/p&gt;
+&lt;p&gt;我們都知道系統時間是有可能會改變的 (藉由 NTP, 基地台校時, 手動, 等方式)，但是很多程
+    
+    </summary>
+    
+    
+      <category term="Python" scheme="http://yulun.me/tags/Python/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>比對兩個資料夾下的檔並輸出彩色 diff</title>
+    <link href="http://yulun.me/2016/diff-files-in-two-folders-linux/"/>
+    <id>http://yulun.me/2016/diff-files-in-two-folders-linux/</id>
+    <published>2016-03-24T20:42:14.000Z</published>
+    <updated>2016-04-28T16:57:13.066Z</updated>
+    
+    <content type="html">&lt;p&gt;平常都在 git repo 內做 diff，一時之間不知道要怎麼比對兩個資料夾底下的檔案&lt;/p&gt;
+&lt;p&gt;這邊作一下紀錄…&lt;/p&gt;
+&lt;figure class=&quot;highlight sh&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;λ ~/temp/ diff -bur FOLDER_1 FOLDER_2&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;p&gt;會發現輸出的 diff &lt;strong&gt;居然沒有顏色&lt;/strong&gt;…&lt;/p&gt;
+&lt;p&gt;於是乎又找到 &lt;code&gt;colofdiff&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;直接 &lt;code&gt;apt-get install colordiff&lt;/code&gt; 即可，就會變成這樣&lt;/p&gt;
+&lt;figure class=&quot;highlight sh&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;diff -bur FOLDER_1 FOLDER_2 | colordiff&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;// 存起來&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;diff -bur FOLDER_1 FOLDER_2 | colordiff &amp;gt; your.diff&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;p&gt;打完收工。&lt;/p&gt;
+</content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;平常都在 git repo 內做 diff，一時之間不知道要怎麼比對兩個資料夾底下的檔案&lt;/p&gt;
+&lt;p&gt;這邊作一下紀錄…&lt;/p&gt;
+&lt;figure class=&quot;highlight sh&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span clas
+    
+    </summary>
+    
+    
+      <category term="Linux" scheme="http://yulun.me/tags/Linux/"/>
+    
+      <category term="Ubuntu" scheme="http://yulun.me/tags/Ubuntu/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>架設 tftp server 在 Ubuntu 環境</title>
+    <link href="http://yulun.me/2016/setup-tftp-server-on-ubuntu/"/>
+    <id>http://yulun.me/2016/setup-tftp-server-on-ubuntu/</id>
+    <published>2016-01-03T23:53:00.000Z</published>
+    <updated>2016-04-28T16:57:13.070Z</updated>
+    
+    <content type="html">&lt;p&gt;&lt;a href=&quot;https://en.wikipedia.org/wiki/Trivial_File_Transfer_Protocol&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;TFTP (Trivial File Transfer Protocol)&lt;/a&gt;，是很常見的通訊協議用在一些小系統上，如 cisco 韌體更新、或是有些廠家會 BIOS 內建 tftp 下載 rom 檔功能。如此輕巧簡易的通訊協議就很常派上用場。&lt;/p&gt;
+&lt;p&gt;Reference: &lt;a href=&quot;http://askubuntu.com/questions/201505/how-do-i-install-and-run-a-tftp-server&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;How do I install and run a TFTP server?&lt;/a&gt;&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;p&gt;先安裝好相關套件&lt;/p&gt;
+&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;sudo apt-get install xinetd tftpd tftp&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;新增一組設定檔，放置於 &lt;code&gt;/etc/xinetd.d/tftp&lt;/code&gt;&lt;/p&gt;
+&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;service tftp&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&amp;#123;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;  protocol        = udp&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;  port            = 69&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;  socket_type     = dgram&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;  wait            = yes&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;  user            = nobody&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;  server          = /usr/sbin/in.tftpd&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;  server_args     = /tftpboot&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;  disable         = no&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&amp;#125;&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;這邊可以看到開啟了 udp 在 69 port、user 是 nobody、server 是 /usr/sbin/in.tftpd、而帶入的參數即為我們放置檔案的資料夾 /tftpboot&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;p&gt;新增 /tftpboot 資料夾，並且修改權限&lt;/p&gt;
+&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;sudo mkdir /tftpboot&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;sudo chmod -R 777 /tftpboot&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;sudo chown -R nobody /tftpboot&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;將 xinetd 重新啟動&lt;/p&gt;
+&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;sudo service xinetd restart&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;放置一任意檔案，然後用 tftp 測試&lt;/p&gt;
+&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;tftp localhost&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;tftp&amp;gt; get test&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;Sent xxx bytes in 0.0 seconds&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;tftp&amp;gt; quit&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;cat test&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;大功告成，打完收工。&lt;/p&gt;
+</content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;&lt;a href=&quot;https://en.wikipedia.org/wiki/Trivial_File_Transfer_Protocol&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;TFTP (Trivial File Transfe
+    
+    </summary>
+    
+    
+      <category term="Ubuntu" scheme="http://yulun.me/tags/Ubuntu/"/>
+    
+      <category term="Debian" scheme="http://yulun.me/tags/Debian/"/>
+    
+      <category term="Tftp" scheme="http://yulun.me/tags/Tftp/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>查看 Docker 每個 Container 流量 (使用 ip nets 指令)</title>
+    <link href="http://yulun.me/2016/docker-container-network-bandwidth-iptables-namespace/"/>
+    <id>http://yulun.me/2016/docker-container-network-bandwidth-iptables-namespace/</id>
+    <published>2016-01-03T23:17:12.000Z</published>
+    <updated>2016-04-28T16:57:13.066Z</updated>
+    
+    <content type="html">&lt;p&gt;忘記是哪一天，忽然想檢查一下各別 Container 的流量用了多少，上網隨手找了一下，看到可以使用 &lt;strong&gt;ip-netns - process network namespace management&lt;/strong&gt; 這個指令來查看不同 namespace 底下的流量。&lt;/p&gt;
+&lt;p&gt;具體方式如下：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;p&gt;取得 Container PID, 這邊我查看名為 wordpress_wordpress_1 的 container&lt;/p&gt;
+&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;λ ~/docker inspect -f &amp;apos;&amp;#123;&amp;#123; .State.Pid &amp;#125;&amp;#125;&amp;apos; wordpress_wordpress_1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;658&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;建立連結至 /var/run/netns/ 供 ip netns 使用&lt;/p&gt;
+&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;λ ~/sudo ln -sf /proc/658/ns/net /var/run/netns/wordpress&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;利用 ip netns 接 iptables 流量就一目了然了！&lt;/p&gt;
+&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;λ ~/sudo ip netns exec wordpress iptables -L -nv&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;Chain INPUT (policy ACCEPT 639 packets, 106K bytes)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt; pkts bytes target     prot opt in     out     source               destination         &lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;Chain FORWARD (policy ACCEPT 0 packets, 0 bytes)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt; pkts bytes target     prot opt in     out     source               destination         &lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;Chain OUTPUT (policy ACCEPT 610 packets, 882K bytes)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt; pkts bytes target     prot opt in     out     source               destination&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Reference: &lt;a href=&quot;http://serverfault.com/questions/615854/counting-bandwidth-from-a-docker-container&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;Counting bandwidth from a Docker container&lt;/a&gt;&lt;/p&gt;
+</content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;忘記是哪一天，忽然想檢查一下各別 Container 的流量用了多少，上網隨手找了一下，看到可以使用 &lt;strong&gt;ip-netns - process network namespace management&lt;/strong&gt; 這個指令來查看不同 namespace 底
+    
+    </summary>
+    
+    
+      <category term="Docker" scheme="http://yulun.me/tags/Docker/"/>
+    
+      <category term="Linux" scheme="http://yulun.me/tags/Linux/"/>
+    
+      <category term="Container" scheme="http://yulun.me/tags/Container/"/>
+    
+      <category term="Iptables" scheme="http://yulun.me/tags/Iptables/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>Rsyslog 設定順序是有差別的 (開啟 UDP bind 127.0.0.1)</title>
+    <link href="http://yulun.me/2016/rsyslog-config-order-matters/"/>
+    <id>http://yulun.me/2016/rsyslog-config-order-matters/</id>
+    <published>2016-01-03T17:05:51.000Z</published>
+    <updated>2016-04-28T16:57:13.070Z</updated>
+    
+    <content type="html">&lt;p&gt;在設定 Rsyslog 時，預設 Debian 7 沒有打開 local udp 514 port 接收的功能。所我就簡單加入：&lt;/p&gt;
+&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;$ModLoad imudp&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;$UDPServerRun 514&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;p&gt;後來發現，預設是 bind 在 &lt;code&gt;0.0.0.0&lt;/code&gt; 相當之危險～等於所有人都可以打 log 到你機器上，於是我又再加入：&lt;/p&gt;
+&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;$ModLoad imudp&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;$UDPServerRun 514&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;$UDPServerAddress 127.0.0.1&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;p&gt;發現沒有用，還是 bind 在 &lt;code&gt;0.0.0.0&lt;/code&gt;，死馬當活馬醫…調整一下順序：&lt;/p&gt;
+&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;$ModLoad imudp&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;$UDPServerAddress 127.0.0.1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;$UDPServerRun 514&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;p&gt;這樣就可以了（暈），原來 Rsyslog 的設定順序是不可逆的。找個時間可以再深入研究一下…（遠目）&lt;/p&gt;
+&lt;p&gt;檢查一下 &lt;code&gt;netstat -nlp | grep 514&lt;/code&gt;：&lt;/p&gt;
+&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;udp        0      0 127.0.0.1:514           0.0.0.0:*                           12274/rsyslogd&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;p&gt;打完收工。&lt;/p&gt;
+</content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;在設定 Rsyslog 時，預設 Debian 7 沒有打開 local udp 514 port 接收的功能。所我就簡單加入：&lt;/p&gt;
+&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;sp
+    
+    </summary>
+    
+    
+      <category term="Linux" scheme="http://yulun.me/tags/Linux/"/>
+    
+      <category term="Debian" scheme="http://yulun.me/tags/Debian/"/>
+    
+      <category term="Rsyslog" scheme="http://yulun.me/tags/Rsyslog/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>關閉 SSH SendENV 解決 locale 問題</title>
+    <link href="http://yulun.me/2016/ssh-remote-sendenv-locale-issue/"/>
+    <id>http://yulun.me/2016/ssh-remote-sendenv-locale-issue/</id>
+    <published>2016-01-03T16:59:29.000Z</published>
+    <updated>2016-04-28T16:57:13.070Z</updated>
+    
+    <content type="html">&lt;p&gt;前幾天遇到一個詭異的問題，就是我使用 ssh 登入遠端 Server，執行特定程式會發生 locale 的問題，看了一下 &lt;code&gt;locales&lt;/code&gt;…&lt;/p&gt;
+&lt;p&gt;驚人的事情發生了！因為同事電腦登入過去一樣下 &lt;code&gt;locales&lt;/code&gt; 居然跟我的不一樣…這是什麼妖術？&lt;/p&gt;
+&lt;p&gt;原來，預設 ssh 會預設傳送本地端的 env 到遠端 server ，為了解決此問題只要編輯 &lt;code&gt;/etc/ssh/ssh_config&lt;/code&gt;，把 &lt;code&gt;SendEnv&lt;/code&gt; 這一行註解掉即可。&lt;/p&gt;
+&lt;p&gt;原本錯誤訊息可能長這樣：&lt;br&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;perl: warning: Setting locale failed.&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;perl: warning: Please check that your locale settings:&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;        LANGUAGE = (unset),&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;        LC_ALL = (unset),&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;        LC_PAPER = &amp;quot;de_DE.UTF-8&amp;quot;,&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;        LC_CTYPE = &amp;quot;de_DE@euro&amp;quot;,&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;        LANG = &amp;quot;en_US.UTF-8&amp;quot;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    are supported and installed on your system.&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;perl: warning: Falling back to the standard locale (&amp;quot;C&amp;quot;).&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
+&lt;p&gt;或這樣&lt;br&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;locale: Cannot set LC_CTYPE to default locale: No such file or directory&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;locale: Cannot set LC_ALL to default locale: No such file or directory&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
+&lt;p&gt;reference: &lt;a href=&quot;http://www.jerri.de/blog/archives/2009/12/04/problem_with_locales_on_remote_server_via_ssh/&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;http://www.jerri.de/blog/archives/2009/12/04/problem_with_locales_on_remote_server_via_ssh/&lt;/a&gt;&lt;/p&gt;
+</content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;前幾天遇到一個詭異的問題，就是我使用 ssh 登入遠端 Server，執行特定程式會發生 locale 的問題，看了一下 &lt;code&gt;locales&lt;/code&gt;…&lt;/p&gt;
+&lt;p&gt;驚人的事情發生了！因為同事電腦登入過去一樣下 &lt;code&gt;locales&lt;/code&gt; 居然跟
+    
+    </summary>
+    
+    
+      <category term="Linux" scheme="http://yulun.me/tags/Linux/"/>
+    
+      <category term="Ssh" scheme="http://yulun.me/tags/Ssh/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>Wireshark x ssh x tcpdump 遠端偵錯</title>
+    <link href="http://yulun.me/2015/wireshark-remote-ssh-tcpdump/"/>
+    <id>http://yulun.me/2015/wireshark-remote-ssh-tcpdump/</id>
+    <published>2015-12-15T01:21:43.000Z</published>
+    <updated>2016-04-28T16:57:13.070Z</updated>
+    
+    <content type="html">&lt;p&gt;最近工作常常需要用到 &lt;strong&gt;Wireshark&lt;/strong&gt; 來看看一些怪怪的問題…&lt;/p&gt;
+&lt;p&gt;如果是要除錯一般 ethernet 就還好，可以借一台具備 Port Mirror 功能的 Switch 來除錯，但是如果遇到像是 WiFi 或 Cellular 這種無線介面，就只能用 &lt;strong&gt;TCPDUMP&lt;/strong&gt; 擋著…&lt;/p&gt;
+&lt;p&gt;但是，光是從 console 觀察 TCPDUMP 資訊實在很費工夫，好在 Wireshark 有提供從 stdin pipe 進來的機制 (當然，你也可以用 tcpdump 存成檔案在用 Wireshark 來讀取)&lt;/p&gt;
+&lt;p&gt;於是乎，只要下…&lt;/p&gt;
+&lt;h3 id=&quot;Linux-Mac&quot;&gt;&lt;a href=&quot;#Linux-Mac&quot; class=&quot;headerlink&quot; title=&quot;Linux / Mac&quot;&gt;&lt;/a&gt;Linux / Mac&lt;/h3&gt;&lt;figure class=&quot;highlight sh&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;ssh &lt;span class=&quot;_&quot;&gt;-l&lt;/span&gt; root 192.168.3.127 tcpdump -U &lt;span class=&quot;_&quot;&gt;-s&lt;/span&gt;0 -w - -i eth1 | wireshark -k -i -&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;p&gt;eth1 換成你要的介面&lt;/p&gt;
+&lt;h3 id=&quot;Windows-without-cygwin&quot;&gt;&lt;a href=&quot;#Windows-without-cygwin&quot; class=&quot;headerlink&quot; title=&quot;Windows (without cygwin)&quot;&gt;&lt;/a&gt;Windows (without cygwin)&lt;/h3&gt;&lt;figure class=&quot;highlight cmd&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;plink.exe -ssh -pw abc123 root@&lt;span class=&quot;number&quot;&gt;192&lt;/span&gt;.&lt;span class=&quot;number&quot;&gt;168&lt;/span&gt;.&lt;span class=&quot;number&quot;&gt;2&lt;/span&gt;.&lt;span class=&quot;number&quot;&gt;1&lt;/span&gt; &quot;tcpdump -ni eth0 -s &lt;span class=&quot;number&quot;&gt;0&lt;/span&gt; -w - &lt;span class=&quot;keyword&quot;&gt;not&lt;/span&gt; port &lt;span class=&quot;number&quot;&gt;22&lt;/span&gt;&quot; | &quot;C:\Program Files\Wireshark\Wireshark.exe&quot; -k -i -&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;p&gt;其中 plink 可前往 putty 下載頁面 &lt;a href=&quot;&quot;&gt;Download&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;Reference:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://ask.wireshark.org/questions/23609/remote-capture-via-ssh-and-pipe&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;Remote capture via ssh and pipe&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+</content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;最近工作常常需要用到 &lt;strong&gt;Wireshark&lt;/strong&gt; 來看看一些怪怪的問題…&lt;/p&gt;
+&lt;p&gt;如果是要除錯一般 ethernet 就還好，可以借一台具備 Port Mirror 功能的 Switch 來除錯，但是如果遇到像是 WiFi 或 Cellula
+    
+    </summary>
+    
+    
+      <category term="Linux" scheme="http://yulun.me/tags/Linux/"/>
+    
+      <category term="Wireshark" scheme="http://yulun.me/tags/Wireshark/"/>
+    
+      <category term="講個秘訣" scheme="http://yulun.me/tags/%E8%AC%9B%E5%80%8B%E7%A7%98%E8%A8%A3/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>依照檔名中版本號碼排序</title>
+    <link href="http://yulun.me/2015/natural-sort-version-numbers-within-text/"/>
+    <id>http://yulun.me/2015/natural-sort-version-numbers-within-text/</id>
+    <published>2015-11-06T20:00:00.000Z</published>
+    <updated>2016-04-28T16:57:13.070Z</updated>
+    
+    <content type="html">&lt;p&gt;&lt;code&gt;ls -v&lt;/code&gt; 可以依照檔名中的版本來排序，根本太強大啊！&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Before -v&lt;/strong&gt;&lt;/p&gt;
+&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;root@zack:/unstable# ls i-feel-so-good*.deb -alh&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;-rw-rw-r-- 1 zack zack 2.2M Sep 14 11:41 i-feel-so-good0.9.0_all.deb&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;-rw-rw-r-- 1 zack zack 1.7M Oct 13 17:40 i-feel-so-good0.9.10_all.deb&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;-rw-rw-r-- 1 zack zack 1.9M Oct 29 10:48 i-feel-so-good0.9.11_all.deb&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;-rw-rw-r-- 1 zack zack 1.8M Sep 22 17:25 i-feel-so-good0.9.1_all.deb&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;-rw-rw-r-- 1 zack zack 1.8M Sep 22 17:55 i-feel-so-good0.9.2_all.deb&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;-rw-rw-r-- 1 zack zack 1.8M Sep 24 15:28 i-feel-so-good0.9.3_all.deb&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;-rw-rw-r-- 1 zack zack 1.8M Sep 30 18:04 i-feel-so-good0.9.5_all.deb&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;-rw-rw-r-- 1 zack zack 1.8M Sep 30 18:41 i-feel-so-good0.9.6_all.deb&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;-rw-rw-r-- 1 zack zack 1.8M Oct  2 18:01 i-feel-so-good0.9.7_all.deb&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;-rw-rw-r-- 1 zack zack 1.7M Oct 13 10:17 i-feel-so-good0.9.8_all.deb&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;-rw-rw-r-- 1 zack zack 1.7M Oct 13 10:42 i-feel-so-good0.9.9_all.deb&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;p&gt;&lt;strong&gt;After -v&lt;/strong&gt;&lt;/p&gt;
+&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;root@zack:/unstable# ls i-feel-so-good*.deb -avlh&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;-rw-rw-r-- 1 apt-server apt-server 2.2M Sep 14 11:41 i-feel-so-good0.9.0_all.deb&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;-rw-rw-r-- 1 apt-server apt-server 1.8M Sep 22 17:25 i-feel-so-good0.9.1_all.deb&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;-rw-rw-r-- 1 apt-server apt-server 1.8M Sep 22 17:55 i-feel-so-good0.9.2_all.deb&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;-rw-rw-r-- 1 apt-server apt-server 1.8M Sep 24 15:28 i-feel-so-good0.9.3_all.deb&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;-rw-rw-r-- 1 apt-server apt-server 1.8M Sep 30 18:04 i-feel-so-good0.9.5_all.deb&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;-rw-rw-r-- 1 apt-server apt-server 1.8M Sep 30 18:41 i-feel-so-good0.9.6_all.deb&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;-rw-rw-r-- 1 apt-server apt-server 1.8M Oct  2 18:01 i-feel-so-good0.9.7_all.deb&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;-rw-rw-r-- 1 apt-server apt-server 1.7M Oct 13 10:17 i-feel-so-good0.9.8_all.deb&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;-rw-rw-r-- 1 apt-server apt-server 1.7M Oct 13 10:42 i-feel-so-good0.9.9_all.deb&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;-rw-rw-r-- 1 apt-server apt-server 1.7M Oct 13 17:40 i-feel-so-good0.9.10_all.deb&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;-rw-rw-r-- 1 apt-server apt-server 1.9M Oct 29 10:48 i-feel-so-good0.9.11_all.deb&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;p&gt;又學到一招了！&lt;/p&gt;
+</content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;&lt;code&gt;ls -v&lt;/code&gt; 可以依照檔名中的版本來排序，根本太強大啊！&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Before -v&lt;/strong&gt;&lt;/p&gt;
+&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code
+    
+    </summary>
+    
+    
+      <category term="shell" scheme="http://yulun.me/tags/shell/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>秒建 WordPress 在你閒置的 Raspberry Pi 上</title>
+    <link href="http://yulun.me/2015/wordpress-docker-image-armhf/"/>
+    <id>http://yulun.me/2015/wordpress-docker-image-armhf/</id>
+    <published>2015-11-01T00:00:20.000Z</published>
+    <updated>2016-04-28T16:57:13.070Z</updated>
+    
+    <content type="html">&lt;p&gt;最近把吃喝玩樂 Blog 從 Blogspot 搬到 WordPress 了！於是乎就想要玩玩各種功能…&lt;/p&gt;
+&lt;p&gt;Production 環境目前是 host 在 DigitalOcean ，看了旁邊的 Raspberry Pi 一眼好像閒著也是閒著，於是上網看看有沒有現成的 Docker Image 可以用，結果找不到喜歡的。就自己 Build 一個吧！&lt;/p&gt;
+&lt;p&gt;英文說明與 Dockerfile, Scripts 都在 Github 連結：&lt;a href=&quot;https://github.com/imZack/wordpress-armhf&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;imZack/wordpress-armhf&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;這邊主要會用到兩個 Image 分別是 &lt;code&gt;zack/wordpress-armhf:4.3.1-apache&lt;/code&gt; 與 &lt;code&gt;armbuilds/mariadb&lt;/code&gt;，詳細的 Dockerfile 可以在上面 Github 連結裡面找到。由於 Docker Hub 無法自動 Build armhf 的 Image 所以我必須先在 Raspberry Pi 上 build 好然後再推上去。(另有用 QEMU 方式，這邊先不多提…)&lt;/p&gt;
+&lt;figure class=&quot;highlight yaml&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;attr&quot;&gt;wordpress:&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;attr&quot;&gt;    image:&lt;/span&gt; zack/wordpress-armhf:&lt;span class=&quot;number&quot;&gt;4.3&lt;/span&gt;&lt;span class=&quot;number&quot;&gt;.1&lt;/span&gt;-apache&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;attr&quot;&gt;    restart:&lt;/span&gt; always&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;attr&quot;&gt;    links:&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;bullet&quot;&gt;     -&lt;/span&gt; mysql&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;attr&quot;&gt;    environment:&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;bullet&quot;&gt;     -&lt;/span&gt; WORDPRESS_DB_PASSWORD=wordpressmeetsdocker&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;attr&quot;&gt;    ports:&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;bullet&quot;&gt;     -&lt;/span&gt; &lt;span class=&quot;string&quot;&gt;&quot;8080:80&quot;&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;attr&quot;&gt;    volumes:&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;bullet&quot;&gt;     -&lt;/span&gt; ./www-data:/var/www/html&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;attr&quot;&gt;mysql:&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;attr&quot;&gt;    image:&lt;/span&gt; armbuilds/mariadb&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;attr&quot;&gt;    restart:&lt;/span&gt; always&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;attr&quot;&gt;    volumes:&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;bullet&quot;&gt;     -&lt;/span&gt; ./mysql-data:/var/lib/mysql&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;attr&quot;&gt;    environment:&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;bullet&quot;&gt;     -&lt;/span&gt; MYSQL_ROOT_PASSWORD=wordpressmeetsdocker&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;bullet&quot;&gt;     -&lt;/span&gt; MYSQL_DATABASE=wordpress&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;p&gt;用上面的 docker-compose.yml 就能在幾秒內建立一個全新的 WordPress 環境囉！&lt;/p&gt;
+&lt;p&gt;只需要下 &lt;code&gt;docker-compose up&lt;/code&gt; 等他跑完初始化，就能開啟 &lt;a href=&quot;http://localhost:8080&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;http://localhost:8080&lt;/a&gt; Port 囉 ！&lt;/p&gt;
+</content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;最近把吃喝玩樂 Blog 從 Blogspot 搬到 WordPress 了！於是乎就想要玩玩各種功能…&lt;/p&gt;
+&lt;p&gt;Production 環境目前是 host 在 DigitalOcean ，看了旁邊的 Raspberry Pi 一眼好像閒著也是閒著，於是上網看看有沒有
+    
+    </summary>
+    
+    
+      <category term="Docker" scheme="http://yulun.me/tags/Docker/"/>
+    
+      <category term="Raspberry Pi" scheme="http://yulun.me/tags/Raspberry-Pi/"/>
+    
+      <category term="Projects" scheme="http://yulun.me/tags/Projects/"/>
+    
+      <category term="WordPress" scheme="http://yulun.me/tags/WordPress/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>淺讀 Netfilter Framework</title>
+    <link href="http://yulun.me/2015/netfilter-framework-linux-iptables/"/>
+    <id>http://yulun.me/2015/netfilter-framework-linux-iptables/</id>
+    <published>2015-10-29T22:16:40.000Z</published>
+    <updated>2016-04-28T16:57:13.070Z</updated>
+    
+    <content type="html">&lt;h2 id=&quot;Background&quot;&gt;&lt;a href=&quot;#Background&quot; class=&quot;headerlink&quot; title=&quot;Background&quot;&gt;&lt;/a&gt;Background&lt;/h2&gt;&lt;ul&gt;
+&lt;li&gt;Linux 2.3.x 時期 Paul Rusty Russel 寫的&lt;/li&gt;
+&lt;li&gt;基本上就是插入一些 Hooks 到 Kernel module&lt;/li&gt;
+&lt;li&gt;Iptables 常常跟 Netfilter Framework 搞混，Iptables 屬於 Netfilter Framework 的一員&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id=&quot;Hooks-and-The-Callback-Functions&quot;&gt;&lt;a href=&quot;#Hooks-and-The-Callback-Functions&quot; class=&quot;headerlink&quot; title=&quot;Hooks and The Callback Functions&quot;&gt;&lt;/a&gt;Hooks and The Callback Functions&lt;/h2&gt;&lt;p&gt;有五種 Hooks 會插入在 Linux networking stack 中的不同階段&lt;/p&gt;
+&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;--&amp;gt; PREROUTING ---&amp;gt; [ROUTE] ---&amp;gt; FORWARD -------------------&amp;gt; POSTROUTING --&amp;gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;                      |                              ^&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;                      |                              |&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;                      |                           [ROUTE]&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;                      V                              |&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;                   LOCAL IN ---&amp;gt; LOCAL PROCESS --&amp;gt; LOCAL OUT&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;a id=&quot;more&quot;&gt;&lt;/a&gt;
+&lt;ol&gt;
+&lt;li&gt;PREROUTING: 所有封包都會經過這個階段，Port&lt;br&gt;Address Translation (NAPT), Redirections, Destination Network Translation (DNAT) 皆是在這裡被實現&lt;/li&gt;
+&lt;li&gt;LOCAL INPUT: 只要是封包傳送到本機，最後一站會到達這裡&lt;/li&gt;
+&lt;li&gt;FORWARD: 只要封包不是要送到本機(如：要經過防火牆)，會抵達這個階段&lt;/li&gt;
+&lt;li&gt;LOCAL OUTPUT: 從本機發出的封包第一站會經此&lt;/li&gt;
+&lt;li&gt;POSTROUTING: 當路由被決定後，離開本機端的封包會經過此。Source Network Address Translation (SNAT) 在此被實作&lt;br&gt;Source Network Address Translation (SNAT) 在此被實作&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3 id=&quot;可以依照封包目的地分成三種類型&quot;&gt;&lt;a href=&quot;#可以依照封包目的地分成三種類型&quot; class=&quot;headerlink&quot; title=&quot;可以依照封包目的地分成三種類型&quot;&gt;&lt;/a&gt;可以依照封包目的地分成三種類型&lt;/h3&gt;&lt;ol&gt;
+&lt;li&gt;穿過防火牆: PREROUTING &amp;gt; FORWARD &amp;gt; POSTROUTING&lt;/li&gt;
+&lt;li&gt;進入防火牆(本機): PREROUTING &amp;gt; LOCAL IN&lt;/li&gt;
+&lt;li&gt;離開防火牆: OUT &amp;gt; POSTROUTING&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3 id=&quot;Callback-可以分為幾種&quot;&gt;&lt;a href=&quot;#Callback-可以分為幾種&quot; class=&quot;headerlink&quot; title=&quot;Callback 可以分為幾種&quot;&gt;&lt;/a&gt;Callback 可以分為幾種&lt;/h3&gt;&lt;ol&gt;
+&lt;li&gt;ACCEPT: 讓封包通過此 Stack 繼續前進&lt;/li&gt;
+&lt;li&gt;DROP: 直接把封包拋棄&lt;/li&gt;
+&lt;li&gt;QUEUE: 丟入 userspace nf_queue，讓使用者程式來處理封包&lt;/li&gt;
+&lt;li&gt;STOLEN: 暫時保管封包，直到發生特定事件。通常用在 collect defragmented IP packets&lt;/li&gt;
+&lt;li&gt;REPEAT: 強迫封包再次進入 Hook&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;關於封包在 Linux Kernel 是怎麼旅遊的可以參考：&lt;/p&gt;
+&lt;h2 id=&quot;The-Connection-Tracking-System-and-the-Stateful-Inspection&quot;&gt;&lt;a href=&quot;#The-Connection-Tracking-System-and-the-Stateful-Inspection&quot; class=&quot;headerlink&quot; title=&quot;The Connection Tracking System and the Stateful Inspection&quot;&gt;&lt;/a&gt;The Connection Tracking System and the Stateful Inspection&lt;/h2&gt;&lt;p&gt;以往在做 Packet Filtering 的時候都是透過封包的標頭檔，像是 IP, PORTS, Destination 在這幾年，這種方式已經透露出它的缺點：DDoS 攻擊容易…&lt;/p&gt;
+&lt;p&gt;Connection tracking system 會儲存連線資訊在記憶體中，包含的資訊有 source and destination&lt;br&gt;IP addresses, port number pairs, protocol types, state, and timeout 透過這些資訊，可以用比較智慧的方式來來過濾封包。&lt;/p&gt;
+&lt;p&gt;這邊要特別記住一點是，Connection tracking system 從不過濾封包，而只是記錄封包路過 Network Stack 的行蹤；還有一些例外狀況，如：記憶體滿了封包被扔掉。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Connection tracking system just tracks packets; it does&lt;br&gt;not filter.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3 id=&quot;關於-State&quot;&gt;&lt;a href=&quot;#關於-State&quot; class=&quot;headerlink&quot; title=&quot;關於 State&quot;&gt;&lt;/a&gt;關於 State&lt;/h3&gt;&lt;ol&gt;
+&lt;li&gt;NEW: 新連線剛開始，表示抵達的封包是通過驗證的 (如：TCP 的 SYNC 封包)；防火牆只看到單方的傳輸(如：防火牆尚未看到任何回覆的封包)&lt;/li&gt;
+&lt;li&gt;ESTABLISHED: 連線已經建立，到達這個狀態表示防火牆已看到兩邊雙向溝通&lt;/li&gt;
+&lt;li&gt;RELATED: 這是一個被期待發生的連線，詳見 “Helpers and Expectations”&lt;/li&gt;
+&lt;li&gt;INVALID: 隸屬於特別狀態，管理者可設定去紀錄或拋棄此類封包&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h2 id=&quot;參考資料&quot;&gt;&lt;a href=&quot;#參考資料&quot; class=&quot;headerlink&quot; title=&quot;參考資料&quot;&gt;&lt;/a&gt;參考資料&lt;/h2&gt;&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;http://www.netfilter.org/&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;http://www.netfilter.org/&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;http://people.netfilter.org/pablo/docs/login.pdf&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;http://people.netfilter.org/pablo/docs/login.pdf&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+</content>
+    
+    <summary type="html">
+    
+      &lt;h2 id=&quot;Background&quot;&gt;&lt;a href=&quot;#Background&quot; class=&quot;headerlink&quot; title=&quot;Background&quot;&gt;&lt;/a&gt;Background&lt;/h2&gt;&lt;ul&gt;
+&lt;li&gt;Linux 2.3.x 時期 Paul Rusty Russel 寫的&lt;/li&gt;
+&lt;li&gt;基本上就是插入一些 Hooks 到 Kernel module&lt;/li&gt;
+&lt;li&gt;Iptables 常常跟 Netfilter Framework 搞混，Iptables 屬於 Netfilter Framework 的一員&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id=&quot;Hooks-and-The-Callback-Functions&quot;&gt;&lt;a href=&quot;#Hooks-and-The-Callback-Functions&quot; class=&quot;headerlink&quot; title=&quot;Hooks and The Callback Functions&quot;&gt;&lt;/a&gt;Hooks and The Callback Functions&lt;/h2&gt;&lt;p&gt;有五種 Hooks 會插入在 Linux networking stack 中的不同階段&lt;/p&gt;
+&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;--&amp;gt; PREROUTING ---&amp;gt; [ROUTE] ---&amp;gt; FORWARD -------------------&amp;gt; POSTROUTING --&amp;gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;                      |                              ^&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;                      |                              |&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;                      |                           [ROUTE]&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;                      V                              |&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;                   LOCAL IN ---&amp;gt; LOCAL PROCESS --&amp;gt; LOCAL OUT&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+    
+    </summary>
+    
+    
+      <category term="Linux" scheme="http://yulun.me/tags/Linux/"/>
+    
+      <category term="iptables" scheme="http://yulun.me/tags/iptables/"/>
+    
+      <category term="Netfilter" scheme="http://yulun.me/tags/Netfilter/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>移除/停用 Ionic Splash Screen</title>
+    <link href="http://yulun.me/2015/remove-splash-screen-ionic-ios-disable/"/>
+    <id>http://yulun.me/2015/remove-splash-screen-ionic-ios-disable/</id>
+    <published>2015-09-09T23:21:11.000Z</published>
+    <updated>2016-04-28T16:57:13.070Z</updated>
+    
+    <content type="html">&lt;p&gt;這幾天再開發 &lt;a href=&quot;http://yulun.me/tnua/&quot;&gt;TNUA BUS APP&lt;/a&gt; iOS 版的時候，發現預設有惱人的 Splash Screen…&lt;/p&gt;
+&lt;p&gt;什麼是 Splash Screen ？就是一開啟 APP 他會跳出來顯示 LOGO 之類的那個玩意，然後過幾秒(或是等待背景程式預備狀態)後自動消失。&lt;/p&gt;
+&lt;p&gt;因為我把 TNUA BUS APP 定調為一個簡單速查的工具，這個過十分沒有必要。Google 了一下發現答案還滿多種的 = =+&lt;/p&gt;
+&lt;p&gt;於是找到了一個官方有提到的設定參數&lt;/p&gt;
+&lt;p&gt;&lt;a href=&quot;http://learn.ionicframework.com/formulas/splash-screen/&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;Customizing the Splash Screen&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;直接在 Ionic 專案根目錄中的 &lt;code&gt;config.xml&lt;/code&gt; 加入下方程式碼：&lt;br&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;&amp;lt;preference name=&amp;quot;AutoHideSplashScreen&amp;quot; value=&amp;quot;true&amp;quot; /&amp;gt;&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
+&lt;p&gt;打完收工。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;UPDATE 2015/09/13&lt;/strong&gt;: 原來上面的方式無法關閉（上次不知道為什麼鬼打牆ㄡ…）&lt;br&gt;要進 Xcode Project Setting 裡面修改把 &lt;strong&gt;Launch Screen File&lt;/strong&gt; 清空，如下圖：&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;https://farm1.staticflickr.com/675/21189569449_067e3168be_o_d.png&quot; alt=&quot;xcode remove splash screen&quot;&gt;&lt;/p&gt;
+</content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;這幾天再開發 &lt;a href=&quot;http://yulun.me/tnua/&quot;&gt;TNUA BUS APP&lt;/a&gt; iOS 版的時候，發現預設有惱人的 Splash Screen…&lt;/p&gt;
+&lt;p&gt;什麼是 Splash Screen ？就是一開啟 APP 他會跳出來顯示 LOGO
+    
+    </summary>
+    
+    
+      <category term="Ionic" scheme="http://yulun.me/tags/Ionic/"/>
+    
+      <category term="ios" scheme="http://yulun.me/tags/ios/"/>
+    
+      <category term="app" scheme="http://yulun.me/tags/app/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>啟用 zram 在 Raspberry Pi 上</title>
+    <link href="http://yulun.me/2015/enable-zram-for-raspberry-pi-debian/"/>
+    <id>http://yulun.me/2015/enable-zram-for-raspberry-pi-debian/</id>
+    <published>2015-09-08T22:18:21.000Z</published>
+    <updated>2016-04-28T16:57:13.066Z</updated>
+    
+    <content type="html">&lt;p&gt;有鑑於 Raspberry Pi 2 記憶體只有 1G，一個不小心可能程式就被 Kernel 發出 OOM 事件幹掉…&lt;/p&gt;
+&lt;p&gt;這邊就想到 2013 WWDC OS X 狂推猛推的神奇黑科技 (事實上卻是早在 Linux 好一陣子的 zram 技術來用，嘖嘖！)&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;zram 有利於嵌入式裝置、小筆電和其它相似的低端硬體裝置。這些裝置通常使用固態儲存，它們由於其原生性質而壽命有限，因而避免以其提供交換空間可防止其迅速磨損。此外，使用zRAM還可顯著降低Linux系統用於交換的I/O&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://zh.wikipedia.org/zh-tw/Zram&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;zRAM，先前稱為compcache&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://wiki.debian.org/ZRam&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;Debian ZRam&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://www.kernel.org/doc/Documentation/blockdev/zram.txt&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;zram: Compressed RAM based block devices&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;a id=&quot;more&quot;&gt;&lt;/a&gt;
+&lt;p&gt;先把原本的 swap 關掉 (預設應該是用 dphys-swapfile)&lt;br&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;sudo update-rc.d dphys-swapfile disable&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
+&lt;p&gt;再來查一下 Kernel 有沒有支援 zram module&lt;br&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;λ ~/ modinfo zram&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;filename:       /lib/modules/4.2.0-rc7-v7+/kernel/drivers/block/zram/zram.ko&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;description:    Compressed RAM Block Device&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;author:         Nitin Gupta &amp;lt;ngupta@vflare.org&amp;gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;license:        Dual BSD/GPL&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;srcversion:     BDC5585C607CBB474B00AC9&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;depends:        zsmalloc,lz4_compress&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;intree:         Y&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;vermagic:       4.2.0-rc7-v7+ SMP preempt mod_unload modversions ARMv7&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;parm:           num_devices:Number of pre-created zram devices (uint)&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
+&lt;p&gt;如果有的話應該會上面訊息…&lt;/p&gt;
+&lt;p&gt;然後就可以來安裝囉～&lt;br&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;# 下載 script&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;λ ~/ sudo wget https://gist.githubusercontent.com/imZack/b7aa605a440de442307d/raw/075c09bf1ae5d9903d59dc28af06c7182522a2af/zram.sh -O /etc/init.d/zram&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;# 給予執行權限&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;λ ~/ sudo chmod +x /etc/init.d/zram&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;# 加入開機啟動&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;λ ~/ sudo update-rc.d zram defaults&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
+&lt;p&gt;不用重開機，來測試一下！&lt;br&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;λ ~/ free&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;             total       used       free     shared    buffers     cached&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;Mem:        948068     192872     755196       6732      21996      98104&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;-/+ buffers/cache:      72772     875296&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;Swap:            0          0          0&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
+&lt;p&gt;接著執行 &lt;code&gt;sudo service zram start&lt;/code&gt;&lt;br&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;λ ~/ sudo service zram start&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;λ ~/ free&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;             total       used       free     shared    buffers     cached&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;Mem:        948068     196608     751460       6748      22044      98128&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;-/+ buffers/cache:      76436     871632&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;Swap:       948064          0     948064&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
+&lt;p&gt;看到 Swap 跑出來就表示大功告成啦！&lt;/p&gt;
+</content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;有鑑於 Raspberry Pi 2 記憶體只有 1G，一個不小心可能程式就被 Kernel 發出 OOM 事件幹掉…&lt;/p&gt;
+&lt;p&gt;這邊就想到 2013 WWDC OS X 狂推猛推的神奇黑科技 (事實上卻是早在 Linux 好一陣子的 zram 技術來用，嘖嘖！)&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;zram 有利於嵌入式裝置、小筆電和其它相似的低端硬體裝置。這些裝置通常使用固態儲存，它們由於其原生性質而壽命有限，因而避免以其提供交換空間可防止其迅速磨損。此外，使用zRAM還可顯著降低Linux系統用於交換的I/O&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://zh.wikipedia.org/zh-tw/Zram&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;zRAM，先前稱為compcache&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://wiki.debian.org/ZRam&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;Debian ZRam&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://www.kernel.org/doc/Documentation/blockdev/zram.txt&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;zram: Compressed RAM based block devices&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+    
+    </summary>
+    
+    
+      <category term="Raspberry Pi" scheme="http://yulun.me/tags/Raspberry-Pi/"/>
+    
+      <category term="Ubuntu" scheme="http://yulun.me/tags/Ubuntu/"/>
+    
+      <category term="Debian" scheme="http://yulun.me/tags/Debian/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>Security of Things: 駭客年會 NANO Wargame 心得</title>
+    <link href="http://yulun.me/2015/hitcon-2015-nano-wargame-security-of-things/"/>
+    <id>http://yulun.me/2015/hitcon-2015-nano-wargame-security-of-things/</id>
+    <published>2015-09-06T13:54:51.000Z</published>
+    <updated>2016-04-28T16:57:13.066Z</updated>
+    
+    <content type="html">&lt;p&gt;&lt;img src=&quot;https://igcdn-photos-c-a.akamaihd.net/hphotos-ak-xaf1/t51.2885-15/e35/11939364_1456057631370146_563041118_n.jpg&quot; width=&quot;350&quot;&gt;&lt;/p&gt;
+&lt;p&gt;以往一直沒機會參加的&lt;a href=&quot;http://hitcon.org/&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;駭客年會 (Hitcon)&lt;/a&gt;，今年終於參與了！&lt;br&gt;本篇主要講一下這次有趣的 Wargame - Arduino Nano…&lt;/p&gt;
+&lt;a id=&quot;more&quot;&gt;&lt;/a&gt;
+&lt;p&gt;一到會場，報到後領取的資料袋裡面可以看到他的身影。&lt;/p&gt;
+&lt;p&gt;一條簡單的 mini usb to usb 與 Arduino Nano；從沒玩過 Arduino 的我第一次就獻給 Hitcon 了 (?)&lt;br&gt;&lt;img src=&quot;http://hitcon.org/2015/CMT/images/ArduinoNano.jpg&quot; alt=&quot;&quot;&gt;&lt;/p&gt;
+&lt;p&gt;上了 IRC 得知題目位於 iot.hitcon.org (現已下線) 後，邊聽神人 geohot 演說一邊去看題目。網頁上有三關可以下載，其實三都在同一份檔案內：一份 &lt;a href=&quot;#ans-py&quot;&gt;&lt;strong&gt;ans.py&lt;/strong&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;剛好摸 Py 也好一陣子了，心理鬆了一口氣…不會 Py 的朋友可能光是上手就比較辛苦一點。(不過看到解答之後，&lt;strong&gt;應該是不會 Py 也可以的啦！&lt;/strong&gt; 不要再說他是 Py wargame 囉！哈！)&lt;/p&gt;
+&lt;h2 id=&quot;題目&quot;&gt;&lt;a href=&quot;#題目&quot; class=&quot;headerlink&quot; title=&quot;題目&quot;&gt;&lt;/a&gt;題目&lt;/h2&gt;&lt;ol&gt;
+&lt;li&gt;回答一個摩斯密碼&lt;/li&gt;
+&lt;li&gt;走迷宮 (9秒內)&lt;/li&gt;
+&lt;li&gt;四則運算 (1秒內)&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3 id=&quot;正規解法&quot;&gt;&lt;a href=&quot;#正規解法&quot; class=&quot;headerlink&quot; title=&quot;正規解法&quot;&gt;&lt;/a&gt;正規解法&lt;/h3&gt;&lt;p&gt;以下有 Wargame 劇透，想要自己體驗的話…不要再往下看嚕…&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;注意：這是我心目中的 &lt;strong&gt;“正規”&lt;/strong&gt; 解法&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;來源：&lt;a href=&quot;http://kb.hitcon.org/post/128246307977/%E7%A7%92%E8%A7%A3-hitcon-nano-%E9%A1%8C&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;Hitcon Knowledge Base 的下方回應&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;一開始我是硬解了 1, 3 題，然後看到 geohot 忽然全破，嘖！想一想不對…這是 Hitcon 啊！又不是程式設計作業…於是我就想說要怎麼把 Arduino 上面的 Firmware Dump 下來。也是有找到解答中提到的 &lt;strong&gt;avrdude&lt;/strong&gt;，只是下錯指令…&lt;/p&gt;
+&lt;p&gt;所以無疾而終。後來就想專心聽講，就沒有再深究下去了&lt;/p&gt;
+&lt;p&gt;當初我下錯的指令：&lt;br&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;avrdude -p atmega328p -c stk500 -U flash:r:&amp;quot;/tmp/arduino.hex&amp;quot;:r -P /dev/tty.wchusbserialfa130 -b115200&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
+&lt;p&gt;可以發現我連 chipset 都選錯了，噗！&lt;/p&gt;
+&lt;p&gt;正解指令：&lt;br&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;avrdude -F -c arduino -b 57600 -P /dev/ttyUSB0 -pm328 -vv -U flash:r:program.bin:r&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
+&lt;p&gt;Dump 下來的 program.bin 為一個 binary 的檔案，要在裡面找解答後出現的金鑰 KEY，這邊可以借助 &lt;strong&gt;strings&lt;/strong&gt; 這個指令…WTF 從來沒用過這個指令，趕快 man 一下：&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;find the printable strings in a object, or other binary, file&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;怎麼有這麼神奇的小工具以前從來沒用過，一定是不夠黑！於是乎，就解出題的 Key 啦！&lt;/p&gt;
+&lt;h3 id=&quot;不正規解法&quot;&gt;&lt;a href=&quot;#不正規解法&quot; class=&quot;headerlink&quot; title=&quot;不正規解法&quot;&gt;&lt;/a&gt;不正規解法&lt;/h3&gt;&lt;p&gt;所謂不正規解法就是…乖乖寫 code 看他要你解什麼，怎麼有點像是 ACM (誤)&lt;/p&gt;
+&lt;p&gt;這邊我就不多提，看一下 HKB 吧！&lt;br&gt;&lt;a href=&quot;http://kb.hitcon.org/post/128246307977/%E7%A7%92%E8%A7%A3-hitcon-nano-%E9%A1%8C&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;Hitcon Knowledge Base 的下方回應&lt;/a&gt;&lt;/p&gt;
+&lt;h3 id=&quot;相關程式碼與紀錄&quot;&gt;&lt;a href=&quot;#相關程式碼與紀錄&quot; class=&quot;headerlink&quot; title=&quot;相關程式碼與紀錄&quot;&gt;&lt;/a&gt;相關程式碼與紀錄&lt;/h3&gt;&lt;script src=&quot;https://gist.github.com/imZack/81f21869937a79870575.js&quot;&gt;&lt;/script&gt;
+
+&lt;h2 id=&quot;心得&quot;&gt;&lt;a href=&quot;#心得&quot; class=&quot;headerlink&quot; title=&quot;心得&quot;&gt;&lt;/a&gt;心得&lt;/h2&gt;&lt;p&gt;&lt;img src=&quot;https://fbcdn-sphotos-a-a.akamaihd.net/hphotos-ak-xpt1/v/t1.0-9/11891131_10205725057988021_7301585605406246660_n.jpg?oh=281e8f5609309e93c855bb2fae387f7d&amp;amp;oe=566C299F&amp;amp;__gda__=1450879894_7f1afb27a6971d302aa86a8039eb1e0f&quot; alt=&quot;&quot;&gt;&lt;/p&gt;
+&lt;p&gt;一開始硬解的很爽直接衝上第四名(應該很多人卡在 Driver, Python 等不熟悉的關係)，後來我一看 geohot 跳上第一名我就恍然大悟知道我的解法有問題，一時半刻又摸不出怎麼 dump firmware 的方式，就留這張 screenshot 作為紀念囉 HAHA&lt;/p&gt;
+&lt;p&gt;在 IoT 時代，對於這種 firmware 可以輕易被 dump 出來，利用 strings 直接取得所有字串資料，身為開發者的我們應該要更注意這方面的防護與瞭解。&lt;/p&gt;
+</content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;&lt;img src=&quot;https://igcdn-photos-c-a.akamaihd.net/hphotos-ak-xaf1/t51.2885-15/e35/11939364_1456057631370146_563041118_n.jpg&quot; width=&quot;350&quot;&gt;&lt;/p&gt;
+&lt;p&gt;以往一直沒機會參加的&lt;a href=&quot;http://hitcon.org/&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;駭客年會 (Hitcon)&lt;/a&gt;，今年終於參與了！&lt;br&gt;本篇主要講一下這次有趣的 Wargame - Arduino Nano…&lt;/p&gt;
+    
+    </summary>
+    
+    
+      <category term="IoT" scheme="http://yulun.me/tags/IoT/"/>
+    
+      <category term="Hitcon" scheme="http://yulun.me/tags/Hitcon/"/>
+    
+      <category term="arduino" scheme="http://yulun.me/tags/arduino/"/>
+    
+      <category term="python" scheme="http://yulun.me/tags/python/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>AD-ZaiJian: 廣告再見</title>
+    <link href="http://yulun.me/2015/AD-ZaiJian-adblock-for-all-devices/"/>
+    <id>http://yulun.me/2015/AD-ZaiJian-adblock-for-all-devices/</id>
+    <published>2015-09-05T16:45:23.000Z</published>
+    <updated>2016-04-28T16:57:13.066Z</updated>
+    
+    <content type="html">&lt;h2 id=&quot;起因&quot;&gt;&lt;a href=&quot;#起因&quot; class=&quot;headerlink&quot; title=&quot;起因&quot;&gt;&lt;/a&gt;起因&lt;/h2&gt;&lt;p&gt;&lt;img src=&quot;https://bd23.https.cdn.softlayer.net/80BD23/142.4.51.106/blog/wp-content/uploads/2015/08/ad-blockers-test.png&quot; alt=&quot;&quot;&gt;&lt;/p&gt;
+&lt;p&gt;幾天前看到幾篇瀏覽器 &lt;a href=&quot;https://www.raymond.cc/blog/10-ad-blocking-extensions-tested-for-best-performance/view-all/&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;AdBlock 以及其他外掛效能大戰&lt;/a&gt;，無意間看到一個有趣的專案：&lt;a href=&quot;http://Pi-Hole.net/&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;Pi-Hole (RASPBERRY PI AD-BLOCKER)&lt;/a&gt;。&lt;/p&gt;
+&lt;p&gt;原來是透過 &lt;a href=&quot;https://en.wikipedia.org/wiki/Dnsmasq&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;&lt;strong&gt;dnsmasq&lt;/strong&gt;&lt;/a&gt;  來提供 dns service (tcp/udp 53)，並藉由網路上定期維護的幾份黑名單來阻擋域名解析…&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Dnsmasq is a Domain Name System (DNS) forwarder and Dynamic Host Configuration Protocol (DHCP) &lt;a href=&quot;https://en.wikipedia.org/wiki/Dnsmasq&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;(more information)&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;這樣就可以把廣告 &lt;strong&gt;擋在你的電腦之前&lt;/strong&gt;；而不是先讀取完廣告，才將其隱藏或刪除網頁上的元素！&lt;/p&gt;
+&lt;a id=&quot;more&quot;&gt;&lt;/a&gt;
+&lt;h2 id=&quot;DEMO&quot;&gt;&lt;a href=&quot;#DEMO&quot; class=&quot;headerlink&quot; title=&quot;DEMO&quot;&gt;&lt;/a&gt;DEMO&lt;/h2&gt;&lt;iframe src=&quot;https://player.vimeo.com/video/138398654?autoplay=1&amp;loop=1&amp;color=ffffff&amp;title=0&amp;byline=0&amp;portrait=0&quot; width=&quot;700&quot; height=&quot;337&quot; frameborder=&quot;0&quot; webkitallowfullscreen=&quot;&quot; mozallowfullscreen=&quot;&quot; allowfullscreen&gt;&lt;/iframe&gt;
+
+&lt;h2 id=&quot;原理&quot;&gt;&lt;a href=&quot;#原理&quot; class=&quot;headerlink&quot; title=&quot;原理&quot;&gt;&lt;/a&gt;原理&lt;/h2&gt;&lt;p&gt;&lt;strong&gt;原本顯示廣告流程應為：&lt;/strong&gt;&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;從 &lt;em&gt;好棒棒廣告公司.com&lt;/em&gt; 取得廣告程式 or 影片 or 圖片&lt;/li&gt;
+&lt;li&gt;詢問 DNS Server adserver.com IP 位置  &lt;strong&gt;&amp;lt;— 黑手伸入的地方&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;Download IP 位置的廣告&lt;/li&gt;
+&lt;li&gt;顯示/執行 廣告&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;&lt;strong&gt;透過修改本機裝置的 DNS Server 將其指為 127.0.0.1 位置，廣告流程就會變成：&lt;/strong&gt;&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;從 &lt;em&gt;好棒棒廣告公司.com&lt;/em&gt; 取得廣告程式 or 影片 or 圖片&lt;/li&gt;
+&lt;li&gt;詢問 AD-ZaiJian (DNS Server) &lt;em&gt;好棒棒廣告公司.com&lt;/em&gt; IP 位置&lt;/li&gt;
+&lt;li&gt;AD-ZaiJian 中的 dnsmasq 開始查詢 &lt;em&gt;好棒棒廣告公司.com&lt;/em&gt; 是否存在黑名單中&lt;br&gt;&lt;strong&gt;是&lt;/strong&gt; 就回覆 127.0.0.1，&lt;strong&gt;否&lt;/strong&gt; 將其查詢往上透通 (預設 8.8.4.4, 8.8.8.8 Google 大神 DNS Service)&lt;/li&gt;
+&lt;li&gt;如此一來 &lt;em&gt;好棒棒廣告公司.com&lt;/em&gt; 的廣告即無法被成功下載 (因為 127.0.0.1 是…你懂得)&lt;/li&gt;
+&lt;/ol&gt;
+&lt;blockquote&gt;
+&lt;p&gt;原始版本的 Pi-Hole 比較搞剛，還多用了一個 &lt;a href=&quot;http://jacobsalmela.com/block-millions-ads-network-wide-with-a-raspberry-pi-hole-2-0/#htmloptions&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;Web Server 上面放空白網頁跟圖片&lt;/a&gt;，我目前覺得有點多餘跟複雜&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id=&quot;修改-Pi-Hole-成為-Docker-Image&quot;&gt;&lt;a href=&quot;#修改-Pi-Hole-成為-Docker-Image&quot; class=&quot;headerlink&quot; title=&quot;修改 Pi-Hole 成為 Docker Image&quot;&gt;&lt;/a&gt;修改 Pi-Hole 成為 Docker Image&lt;/h2&gt;&lt;h2 id=&quot;安裝&quot;&gt;&lt;a href=&quot;#安裝&quot; class=&quot;headerlink&quot; title=&quot;安裝&quot;&gt;&lt;/a&gt;安裝&lt;/h2&gt;&lt;p&gt;由於已經包裝成 Docker Image 並放置在 Docker Hub 上公開下載；所以我們可以很輕鬆地在不同平台上運行 AD-ZaiJian&lt;/p&gt;
+&lt;p&gt;&lt;a href=&quot;https://hub.docker.com/r/zack/ad-zaijian/&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;&lt;img src=&quot;http://dockeri.co/image/zack/ad-zaijian&quot; alt=&quot;&quot;&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&quot;http://docs.docker.com/linux/started/&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;安裝 Docker 請參考官方網站&lt;/a&gt;&lt;/p&gt;
+&lt;h3 id=&quot;Raspberry-Pi-2-與-其他支援-Docker-的平台-Ubuntu-Debian-…&quot;&gt;&lt;a href=&quot;#Raspberry-Pi-2-與-其他支援-Docker-的平台-Ubuntu-Debian-…&quot; class=&quot;headerlink&quot; title=&quot;Raspberry Pi 2 與 其他支援 Docker 的平台 (Ubuntu/Debian/…)&quot;&gt;&lt;/a&gt;Raspberry Pi 2 與 其他支援 Docker 的平台 (Ubuntu/Debian/…)&lt;/h3&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;λ ~/ export IMAGE_NAME=zack/ad-zaijian-armhf        # (Raspberry Pi 2 為 zack/ad-zaijian-armhf)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;                                                    # (其他 amd64 架構為 zack/ad-zaijian)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;λ ~/ docker pull $IMAGE_NAME                        # 把 Image 抓回&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;λ ~/ docker run -d --name ad-zaijian \&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    -p 53:53/tcp -p 53:53/udp \                     # 透通 tcp/udp 53 port&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    -v `pwd`:/data \&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    --cap-add=NET_ADMIN \&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    $IMAGE_NAME&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;p&gt;搞定，接下來把手機/裝置的 DNS 設定改為 Server IP，這邊例子為 192.168.1.130，大功告成！&lt;/p&gt;
+&lt;h3 id=&quot;Synology-DS-713&quot;&gt;&lt;a href=&quot;#Synology-DS-713&quot; class=&quot;headerlink&quot; title=&quot;Synology DS 713+&quot;&gt;&lt;/a&gt;Synology DS 713+&lt;/h3&gt;&lt;p&gt;圖片比較多的關係，另開一篇…&lt;a href=&quot;#&quot;&gt;說明：安裝 AD-JaiJian 在 Synology DS 713+(尚未完工)&lt;/a&gt;&lt;/p&gt;
+&lt;h2 id=&quot;原始碼&quot;&gt;&lt;a href=&quot;#原始碼&quot; class=&quot;headerlink&quot; title=&quot;原始碼&quot;&gt;&lt;/a&gt;原始碼&lt;/h2&gt;&lt;p&gt;&lt;div class=&quot;github-card&quot; data-github=&quot;imZack/ad-zaijian&quot; data-width=&quot;400&quot; data-height=&quot;300&quot; data-theme=&quot;medium&quot;&gt;&lt;/div&gt;&lt;/p&gt;
+&lt;script src=&quot;//cdn.jsdelivr.net/github-cards/latest/widget.js&quot;&gt;&lt;/script&gt;
+</content>
+    
+    <summary type="html">
+    
+      &lt;h2 id=&quot;起因&quot;&gt;&lt;a href=&quot;#起因&quot; class=&quot;headerlink&quot; title=&quot;起因&quot;&gt;&lt;/a&gt;起因&lt;/h2&gt;&lt;p&gt;&lt;img src=&quot;https://bd23.https.cdn.softlayer.net/80BD23/142.4.51.106/blog/wp-content/uploads/2015/08/ad-blockers-test.png&quot; alt=&quot;&quot;&gt;&lt;/p&gt;
+&lt;p&gt;幾天前看到幾篇瀏覽器 &lt;a href=&quot;https://www.raymond.cc/blog/10-ad-blocking-extensions-tested-for-best-performance/view-all/&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;AdBlock 以及其他外掛效能大戰&lt;/a&gt;，無意間看到一個有趣的專案：&lt;a href=&quot;http://Pi-Hole.net/&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;Pi-Hole (RASPBERRY PI AD-BLOCKER)&lt;/a&gt;。&lt;/p&gt;
+&lt;p&gt;原來是透過 &lt;a href=&quot;https://en.wikipedia.org/wiki/Dnsmasq&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;&lt;strong&gt;dnsmasq&lt;/strong&gt;&lt;/a&gt;  來提供 dns service (tcp/udp 53)，並藉由網路上定期維護的幾份黑名單來阻擋域名解析…&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Dnsmasq is a Domain Name System (DNS) forwarder and Dynamic Host Configuration Protocol (DHCP) &lt;a href=&quot;https://en.wikipedia.org/wiki/Dnsmasq&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;(more information)&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;這樣就可以把廣告 &lt;strong&gt;擋在你的電腦之前&lt;/strong&gt;；而不是先讀取完廣告，才將其隱藏或刪除網頁上的元素！&lt;/p&gt;
+    
+    </summary>
+    
+    
+      <category term="Docker" scheme="http://yulun.me/tags/Docker/"/>
+    
+      <category term="DNS" scheme="http://yulun.me/tags/DNS/"/>
+    
+      <category term="AdBlock" scheme="http://yulun.me/tags/AdBlock/"/>
+    
+      <category term="Synology" scheme="http://yulun.me/tags/Synology/"/>
+    
+      <category term="Raspberry Pi" scheme="http://yulun.me/tags/Raspberry-Pi/"/>
+    
+      <category term="Projects" scheme="http://yulun.me/tags/Projects/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>自造：PTT 新文章、關鍵字 手機通知服務</title>
+    <link href="http://yulun.me/2015/ifttt-ptt-rss-alarm-event/"/>
+    <id>http://yulun.me/2015/ifttt-ptt-rss-alarm-event/</id>
+    <published>2015-08-31T00:00:55.000Z</published>
+    <updated>2016-04-28T16:57:13.066Z</updated>
+    
+    <content type="html">&lt;p&gt;故事是這樣的…&lt;/p&gt;
+&lt;p&gt;常常在 PTT 上看到一些&lt;strong&gt;特價訊息&lt;/strong&gt;或是&lt;strong&gt;好康活動&lt;/strong&gt;文章，由於不是整天沒事幹守在板上所以每次看到訊息的時候可能都已經超過&lt;strong&gt;活動時間&lt;/strong&gt;…Q_Q&lt;/p&gt;
+&lt;p&gt;於是誕生了…&lt;/p&gt;
+&lt;a id=&quot;more&quot;&gt;&lt;/a&gt;
+&lt;h2 id=&quot;2015-12-20-更新&quot;&gt;&lt;a href=&quot;#2015-12-20-更新&quot; class=&quot;headerlink&quot; title=&quot;2015/12/20 更新&quot;&gt;&lt;/a&gt;2015/12/20 更新&lt;/h2&gt;&lt;p&gt;大約一個月前 PTT Web 的時間欄位有更新，所以 Server 記得要更新喔！不然會收不到通知。另一方面也順手新增：文章標題關鍵字過濾功能(支援多個)，這樣就更方便啦！&lt;/p&gt;
+&lt;p&gt;使用方式：&lt;/p&gt;
+&lt;figure class=&quot;highlight sh&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;// Single keyword&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;curl http://localhost:8000/Gossiping.xml?title=肥宅&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;// Multiple keywords&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;curl http://localhost:8000/Gossiping.xml?title=肥宅&amp;amp;title=國民黨&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;p&gt;所以只要把上面網址貼到原先的 &lt;strong&gt;New feed item&lt;/strong&gt; 就可以啦！&lt;/p&gt;
+&lt;h2 id=&quot;架設-PTT-RSS-Service&quot;&gt;&lt;a href=&quot;#架設-PTT-RSS-Service&quot; class=&quot;headerlink&quot; title=&quot;架設 PTT RSS Service&quot;&gt;&lt;/a&gt;架設 PTT RSS Service&lt;/h2&gt;&lt;h3 id=&quot;概述&quot;&gt;&lt;a href=&quot;#概述&quot; class=&quot;headerlink&quot; title=&quot;概述&quot;&gt;&lt;/a&gt;概述&lt;/h3&gt;&lt;p&gt;為什麼要自己架 RSS Service 咧…因為 PTT 的 RSS 很不靠譜啊…三不五時就掛掉，或是有些版就不知道為什麼沒有 RSS 服務…於是這邊就用簡單的 nodejs 兜一個出來…&lt;/p&gt;
+&lt;p&gt;&lt;a href=&quot;https://github.com/imZack/PttRSS&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;Source code (MIT License) on GitHub&lt;/a&gt; 喜歡記得幫我點一顆愛心&lt;/p&gt;
+&lt;p&gt;大致上用了下面這些 node modules…&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;cheerio&lt;/strong&gt; Parse 網頁版 PTT&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;lru-cache&lt;/strong&gt; LRU 快取實作&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;request&lt;/strong&gt; 簡單易用的 Server-side 發送 HTTP request&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;rss&lt;/strong&gt; 產生符合規格的 RSS&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;express&lt;/strong&gt; 不多說 Web server&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;有興趣的朋友可以看一下 source code 應該滿簡單的&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;18 禁板的入口年齡確認已經預設 bypass &lt;a href=&quot;https://github.com/imZack/PttRSS/blob/master/ptt.js#L7-L9&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;source code&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3 id=&quot;安裝與啟動&quot;&gt;&lt;a href=&quot;#安裝與啟動&quot; class=&quot;headerlink&quot; title=&quot;安裝與啟動&quot;&gt;&lt;/a&gt;安裝與啟動&lt;/h3&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;git clone https://github.com/imZack/PttRSS&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;npm install&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;PORT=8000 npm start&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;p&gt;以上，打開瀏覽器瀏覽 &lt;code&gt;http://server:8000/{板名英文}.xml&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;如：&lt;code&gt;http://server:8000/drama-ticket.xml&lt;/code&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;板名英文請參考 PTT 網頁版&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;電影版 &lt;a href=&quot;https://www.ptt.cc/bbs/movie/index.html&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;https://www.ptt.cc/bbs/movie/index.html&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;戲劇票務 &lt;a href=&quot;https://www.ptt.cc/bbs/drama-ticket/index.html&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;https://www.ptt.cc/bbs/drama-ticket/index.html&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;依此類推&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/blockquote&gt;
+&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;&amp;lt;?xml version=&amp;quot;1.0&amp;quot; encoding=&amp;quot;UTF-8&amp;quot;?&amp;gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&amp;lt;rss xmlns:atom=&amp;quot;http://www.w3.org/2005/Atom&amp;quot; xmlns:content=&amp;quot;http://purl.org/rss/1.0/modules/content/&amp;quot; xmlns:dc=&amp;quot;http://purl.org/dc/elements/1.1/&amp;quot; version=&amp;quot;2.0&amp;quot;&amp;gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;  &amp;lt;channel&amp;gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    &amp;lt;title&amp;gt;&amp;lt;![CDATA[drama-ticket]]&amp;gt;&amp;lt;/title&amp;gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    &amp;lt;description&amp;gt;&amp;lt;![CDATA[PTT: drama-ticket]]&amp;gt;&amp;lt;/description&amp;gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    &amp;lt;link&amp;gt;https://www.ptt.cc/bbs/drama-ticket/index.html&amp;lt;/link&amp;gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    &amp;lt;generator&amp;gt;PttRSS&amp;lt;/generator&amp;gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    &amp;lt;lastBuildDate&amp;gt;Wed, 01 Jul 2015 16:12:40 GMT&amp;lt;/lastBuildDate&amp;gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    &amp;lt;pubDate&amp;gt;Wed, 01 Jul 2015 16:12:40 GMT&amp;lt;/pubDate&amp;gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    &amp;lt;item&amp;gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;      &amp;lt;title&amp;gt;&amp;lt;![CDATA[[售票] 江蕙8/8 台北小巨蛋演唱會 黃3D$2800一張]]&amp;gt;&amp;lt;/title&amp;gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;      &amp;lt;link&amp;gt;https://www.ptt.cc/bbs/Drama-Ticket/M.1435766811.A.8A7.html&amp;lt;/link&amp;gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;      &amp;lt;guid isPermaLink=&amp;quot;true&amp;quot;&amp;gt;https://www.ptt.cc/bbs/Drama-Ticket/M.1435766811.A.8A7.html&amp;lt;/guid&amp;gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;      &amp;lt;dc:creator&amp;gt;&amp;lt;![CDATA[pierrebebe]]&amp;gt;&amp;lt;/dc:creator&amp;gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;      &amp;lt;pubDate&amp;gt;Wed, 01 Jul 2015 16:00:00 GMT&amp;lt;/pubDate&amp;gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    &amp;lt;/item&amp;gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    &amp;lt;item&amp;gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;      &amp;lt;title&amp;gt;&amp;lt;![CDATA[Re: [換票] 江蕙演唱會7/28紅1C連號換其他天]]&amp;gt;&amp;lt;/title&amp;gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;      &amp;lt;link&amp;gt;https://www.ptt.cc/bbs/Drama-Ticket/M.1435767028.A.72C.html&amp;lt;/link&amp;gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;      &amp;lt;guid isPermaLink=&amp;quot;true&amp;quot;&amp;gt;https://www.ptt.cc/bbs/Drama-Ticket/M.1435767028.A.72C.html&amp;lt;/guid&amp;gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;      &amp;lt;dc:creator&amp;gt;&amp;lt;![CDATA[yinfan]]&amp;gt;&amp;lt;/dc:creator&amp;gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;      &amp;lt;pubDate&amp;gt;Wed, 01 Jul 2015 16:00:00 GMT&amp;lt;/pubDate&amp;gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    &amp;lt;/item&amp;gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    &amp;lt;item&amp;gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;      &amp;lt;title&amp;gt;&amp;lt;![CDATA[[公告] 版規-發文前請務必看完]]&amp;gt;&amp;lt;/title&amp;gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;      &amp;lt;link&amp;gt;https://www.ptt.cc/bbs/Drama-Ticket/M.1351960651.A.0B0.html&amp;lt;/link&amp;gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;      &amp;lt;guid isPermaLink=&amp;quot;true&amp;quot;&amp;gt;https://www.ptt.cc/bbs/Drama-Ticket/M.1351960651.A.0B0.html&amp;lt;/guid&amp;gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;      &amp;lt;dc:creator&amp;gt;&amp;lt;![CDATA[nickapple]]&amp;gt;&amp;lt;/dc:creator&amp;gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;      &amp;lt;pubDate&amp;gt;Sat, 03 Jan 2015 16:00:00 GMT&amp;lt;/pubDate&amp;gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    &amp;lt;/item&amp;gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;  &amp;lt;/channel&amp;gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&amp;lt;/rss&amp;gt;&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;p&gt;OK。以上到這邊你就已經擁有一個私人的 PTT RSS Service 囉 ！&lt;/p&gt;
+&lt;h2 id=&quot;設定-IFTTT-服務-手機-Push-notification&quot;&gt;&lt;a href=&quot;#設定-IFTTT-服務-手機-Push-notification&quot; class=&quot;headerlink&quot; title=&quot;設定 IFTTT 服務 (手機 Push notification)&quot;&gt;&lt;/a&gt;設定 IFTTT 服務 (手機 Push notification)&lt;/h2&gt;&lt;p&gt;首先，先認識一下 &lt;a href=&quot;https://ifttt.com&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;IFTTT&lt;/a&gt; 這個有趣的服務。已經有很多文章介紹過，我這邊就不贅述大家可以自行參考：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;a href=&quot;http://www.playpcesor.com/2014/04/ifttt-android-ios.html&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;IFTTT Android iOS 入門教學：如果明天下雨請今日提醒我&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;http://appleuser.com/2014/11/16/ifttt/&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;請勿自己工作，指揮 IFTTT 就好！&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://loveninayeh.wordpress.com/2014/01/23/ifttt-%E6%95%99%E5%AD%B8%EF%BC%9A%E8%B6%85%E5%A5%BD%E7%94%A8%E9%9B%B2%E7%AB%AF%E6%95%B4%E5%90%88%E6%87%89%E7%94%A8/&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;IFTTT 教學：超好用雲端整合應用&lt;/a&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;所以你會發現，其實我們可以擁有不只是&lt;strong&gt;手機的通知&lt;/strong&gt;…也可以是各式各樣的串連，自由發揮～&lt;/p&gt;
+&lt;p&gt;右上角你的帳號點下去，有一個選項 &lt;a href=&quot;https://ifttt.com/myrecipes/personal/new&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;Create&lt;/a&gt;。按下去可以看到 &lt;code&gt;if this then that&lt;/code&gt;，其中 &lt;strong&gt;this&lt;/strong&gt; 按下後我們搜尋 &lt;code&gt;feed&lt;/code&gt; 這個關鍵字可以看到一個熟悉的 RSS 圖示，其中點下去又有兩個選項：&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;http://i.imgur.com/Zt8sN3p.png&quot; alt=&quot;&quot;&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;New feed item&lt;/strong&gt; 有新的[文章] 啟動&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;New feed item matches&lt;/strong&gt; 有 [新的文章] 且 [符合關鍵字] 啟動&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;要注意的是，這邊關鍵字沒有邏輯功能。也就是說你不能打 &lt;code&gt;Google OR 谷哥&lt;/code&gt;，目前的解法是做在 RSS Provider 不過這點我們之後再來討論…目前可以先新增多個條件來解決。&lt;/p&gt;
+&lt;p&gt;這邊再把剛剛架設好的 RSS Service Url 填入 (這邊我希望接收所有 &lt;strong&gt;drama-ticket&lt;/strong&gt; 版的新文章)&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;http://i.imgur.com/Bg0dLzX.png&quot; alt=&quot;&quot;&gt;&lt;/p&gt;
+&lt;p&gt;都設定完之後，還有 LOG 可以看～是不是很幫便阿阿阿阿！再也不會錯過任何 PTT 文章囉～&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;http://i.imgur.com/qvlT5dP.png&quot; alt=&quot;&quot;&gt;&lt;/p&gt;
+&lt;p&gt;手機 APP 裝好後，就能收到訊息如下圖：&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;http://i.imgur.com/msdCw5r.png&quot; alt=&quot;&quot;&gt;&lt;/p&gt;
+&lt;p&gt;打完收工&lt;/p&gt;
+</content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;故事是這樣的…&lt;/p&gt;
+&lt;p&gt;常常在 PTT 上看到一些&lt;strong&gt;特價訊息&lt;/strong&gt;或是&lt;strong&gt;好康活動&lt;/strong&gt;文章，由於不是整天沒事幹守在板上所以每次看到訊息的時候可能都已經超過&lt;strong&gt;活動時間&lt;/strong&gt;…Q_Q&lt;/p&gt;
+&lt;p&gt;於是誕生了…&lt;/p&gt;
+    
+    </summary>
+    
+    
+      <category term="Projects" scheme="http://yulun.me/tags/Projects/"/>
+    
+      <category term="rss" scheme="http://yulun.me/tags/rss/"/>
+    
+      <category term="PTT" scheme="http://yulun.me/tags/PTT/"/>
+    
+      <category term="IFTTT" scheme="http://yulun.me/tags/IFTTT/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>編譯小米 WIFI (mt7601) 給樹莓派使用</title>
+    <link href="http://yulun.me/2015/raspberrypi-wifi-mt7601-mediatek-ralink/"/>
+    <id>http://yulun.me/2015/raspberrypi-wifi-mt7601-mediatek-ralink/</id>
+    <published>2015-04-28T23:06:43.000Z</published>
+    <updated>2016-04-28T16:57:13.070Z</updated>
+    
+    <content type="html">&lt;h2 id=&quot;安裝-Driver&quot;&gt;&lt;a href=&quot;#安裝-Driver&quot; class=&quot;headerlink&quot; title=&quot;安裝 Driver&quot;&gt;&lt;/a&gt;安裝 Driver&lt;/h2&gt;&lt;p&gt;繼上一篇&lt;a href=&quot;/2015/Raspberry-pi-cross-compile-kernel/&quot;&gt;自編 Kernel&lt;/a&gt; 後，其實我最主要的目的是希望把小米 WiFi 的 Driver 裝上…&lt;/p&gt;
+&lt;p&gt;下載我先前修改過(&lt;a href=&quot;https://github.com/imZack/mt7601/commit/13e5067c8f20f35363f28b653e9bba8d11601ba1&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;加入MIFI 的 usb device id&lt;/a&gt;)&lt;br&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;λ ~/git clone https://github.com/imZack/mt7601.git&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
+&lt;a id=&quot;more&quot;&gt;&lt;/a&gt;
+&lt;p&gt;然後再設定好 &lt;code&gt;LINUX_SRC&lt;/code&gt;、&lt;code&gt;CROSS_COMPILE&lt;/code&gt; 兩個參數&lt;br&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;λ ~/cd mt7601/src&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;λ ~/export LINUX_SRC=~/rasp/linux&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;λ ~/export CROSS_COMPILE=~/rasp/tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian-x64/bin/arm-linux-gnueabihf-&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
+&lt;p&gt;最後執行&lt;br&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;λ ~/make&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
+&lt;p&gt;產出的檔案有兩個分別是&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;os/linux/mt7601Usta.ko&lt;/strong&gt; 及 &lt;strong&gt;RT2870STA.dat&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;把這兩個 scp 到 Raspberry Pi 上&lt;/p&gt;
+&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;scp os/linux/mt7601Usta.ko RT2870STA.dat 192.168.1.130:/tmp&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;p&gt;然後在機器上搬到正確的位置 &lt;strong&gt;記得要用 root &lt;/strong&gt;&lt;br&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;# mv /tmp/mt7601Usta.ko /lib/modules/3.18.11-v7+/kernel/net/wireless/mt7601Usta.ko&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;# mv /tmp/RT2870STA.dat /etc/Wireless/RT2870STA/RT2870STA.dat&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
+&lt;p&gt;最後就執行&lt;br&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;# depmod -a&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;# modprobe mt7601Usta.ko&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;# dmesg&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;[  242.349499] usbcore: registered new interface driver rt2870&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
+&lt;p&gt;可以看見他已經正確被載入了&lt;/p&gt;
+&lt;h2 id=&quot;將-ra0-改為常見的-wlan0&quot;&gt;&lt;a href=&quot;#將-ra0-改為常見的-wlan0&quot; class=&quot;headerlink&quot; title=&quot;將 ra0 改為常見的 wlan0&quot;&gt;&lt;/a&gt;將 ra0 改為常見的 wlan0&lt;/h2&gt;&lt;p&gt;搞定後，插上 WiFi dongle 會發現他變成 &lt;strong&gt;ra0&lt;/strong&gt; 而不是 &lt;strong&gt;wlan0&lt;/strong&gt; 有些軟體可能不能用。所以我在這邊修改&lt;/p&gt;
+&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;# vim /etc/udev/rules.d/70-persistent-net.rules&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;p&gt;在這個檔案最後一行加入&lt;br&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;ACTION==&amp;quot;add&amp;quot;, SUBSYSTEM==&amp;quot;net&amp;quot;, ATTR&amp;#123;type&amp;#125;==&amp;quot;1&amp;quot;, KERNEL==&amp;quot;ra*&amp;quot;, NAME=&amp;quot;wlan0&amp;quot;&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
+&lt;p&gt;重新開機讓他生效&lt;br&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;# reboot&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
+&lt;h2 id=&quot;設定-wpa-supplicant-conf&quot;&gt;&lt;a href=&quot;#設定-wpa-supplicant-conf&quot; class=&quot;headerlink&quot; title=&quot;設定 wpa_supplicant.conf&quot;&gt;&lt;/a&gt;設定 wpa_supplicant.conf&lt;/h2&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;# vim /etc/wpa_supplicant/wpa_supplicant.conf&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;p&gt;我的 ssid 為 zack 密碼為 123456789&lt;/p&gt;
+&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;update_config=1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;network=&amp;#123;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    ssid=&amp;quot;zack&amp;quot;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    psk=&amp;quot;123456789&amp;quot;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&amp;#125;&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;p&gt;詳細說明 &lt;a href=&quot;http://w1.fi/cgit/hostap/plain/wpa_supplicant/wpa_supplicant.conf&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;wpa_supplicant.conf&lt;/a&gt;&lt;/p&gt;
+&lt;h2 id=&quot;設定一開機自動連上網&quot;&gt;&lt;a href=&quot;#設定一開機自動連上網&quot; class=&quot;headerlink&quot; title=&quot;設定一開機自動連上網&quot;&gt;&lt;/a&gt;設定一開機自動連上網&lt;/h2&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;# vim /etc/network/interfaces&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;p&gt;主要看下面的 &lt;strong&gt;wlan0&lt;/strong&gt; 部分，這樣開機就會自動連線並且啟動 dhclient 取得 IP&lt;/p&gt;
+&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;auto lo&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;iface lo inet loopback&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;iface eth0 inet dhcp&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;allow-hotplug wlan0&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;iface wlan0 inet dhcp&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;wpa-conf /etc/wpa_supplicant/wpa_supplicant.conf&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;iface default inet dhcp&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;p&gt;設定完後不需要重新開機，直接執行 &lt;code&gt;ifdown wlan0 &amp;amp;&amp;amp; ifup wlan0&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;打完收工。&lt;/p&gt;
+</content>
+    
+    <summary type="html">
+    
+      &lt;h2 id=&quot;安裝-Driver&quot;&gt;&lt;a href=&quot;#安裝-Driver&quot; class=&quot;headerlink&quot; title=&quot;安裝 Driver&quot;&gt;&lt;/a&gt;安裝 Driver&lt;/h2&gt;&lt;p&gt;繼上一篇&lt;a href=&quot;/2015/Raspberry-pi-cross-compile-kernel/&quot;&gt;自編 Kernel&lt;/a&gt; 後，其實我最主要的目的是希望把小米 WiFi 的 Driver 裝上…&lt;/p&gt;
+&lt;p&gt;下載我先前修改過(&lt;a href=&quot;https://github.com/imZack/mt7601/commit/13e5067c8f20f35363f28b653e9bba8d11601ba1&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;加入MIFI 的 usb device id&lt;/a&gt;)&lt;br&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;λ ~/git clone https://github.com/imZack/mt7601.git&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
+    
+    </summary>
+    
+    
+      <category term="driver" scheme="http://yulun.me/tags/driver/"/>
+    
+      <category term="Raspberry Pi" scheme="http://yulun.me/tags/Raspberry-Pi/"/>
+    
+      <category term="cross-compile" scheme="http://yulun.me/tags/cross-compile/"/>
+    
+      <category term="linux" scheme="http://yulun.me/tags/linux/"/>
+    
+      <category term="wireless" scheme="http://yulun.me/tags/wireless/"/>
+    
+      <category term="mt7601" scheme="http://yulun.me/tags/mt7601/"/>
+    
+      <category term="kernel module" scheme="http://yulun.me/tags/kernel-module/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>Raspberry Pi 樹莓派編譯新核心</title>
+    <link href="http://yulun.me/2015/Raspberry-pi-cross-compile-kernel/"/>
+    <id>http://yulun.me/2015/Raspberry-pi-cross-compile-kernel/</id>
+    <published>2015-04-27T22:29:57.000Z</published>
+    <updated>2016-04-28T16:57:13.066Z</updated>
+    
+    <content type="html">&lt;p&gt;前陣子在家門口踢到一個…&lt;/p&gt;
+&lt;p&gt;  &lt;img src=&quot;https://igcdn-photos-a-a.akamaihd.net/hphotos-ak-xaf1/t51.2885-15/11123682_366899226847560_1223930663_n.jpg&quot; alt=&quot;&quot;&gt;&lt;/p&gt;
+&lt;p&gt;Raspberry Pi 二代目 Model B，然後就 &lt;del&gt;過著開開心心的生活&lt;/del&gt; 開始想把一堆東西裝上去然後&lt;del&gt;不知道要幹嘛!?&lt;/del&gt;書房的 Hub 滿了，所以我就要拿出之前買的 &lt;a href=&quot;http://www.mi.com/tw/miwifi/&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;小米隨身WiFi&lt;/a&gt; 拿出來插上…&lt;/p&gt;
+&lt;p&gt;就會發現，什麼事都沒有發生。因為…Driver 沒有進 Kernel 根據非官方 &lt;a href=&quot;https://github.com/porjo/mt7601&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;Github 上的 Repo&lt;/a&gt; 顯示：&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;This repository is based on the original driver released by MediaTek which was rejected from Linux kernel because of the poor code quality.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;嗯！所以展開自編之路…&lt;/p&gt;
+&lt;a id=&quot;more&quot;&gt;&lt;/a&gt;
+&lt;p&gt;故事一波三折，曲折離奇…先進入正題&lt;/p&gt;
+&lt;h2 id=&quot;準備環境&quot;&gt;&lt;a href=&quot;#準備環境&quot; class=&quot;headerlink&quot; title=&quot;準備環境&quot;&gt;&lt;/a&gt;準備環境&lt;/h2&gt;&lt;p&gt;我的環境是 Ubuntu 64bit&lt;br&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;λ ~/uname -a&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;Linux ubuntu 3.13.0-35-generic #62-Ubuntu SMP Fri Aug 15 01:58:42 UTC 2014 x86_64 x86_64 x86_64 GNU/Linux&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
+&lt;p&gt;創一個資料夾來放等等要下載的東西&lt;br&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;λ ~/mkdir ~/rasp&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;注意&lt;/strong&gt; 以下的 git clone 會帶  &lt;code&gt;--depth 1&lt;/code&gt; 表示我們只抓&lt;strong&gt;預設 branch&lt;/strong&gt; 的最後一個 commit 這是為了加快下載速度以及節省空間&lt;/p&gt;
+&lt;h2 id=&quot;Raspberry-Pi-Toolchain-download&quot;&gt;&lt;a href=&quot;#Raspberry-Pi-Toolchain-download&quot; class=&quot;headerlink&quot; title=&quot;Raspberry Pi Toolchain (download)&quot;&gt;&lt;/a&gt;Raspberry Pi Toolchain (download)&lt;/h2&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;λ ~/rasp/ git clone https://github.com/raspberrypi/tools --depth 1&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;p&gt;toolchain 位於下面位置&lt;br&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;λ ~/rasp/ ls tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian-x64/bin/arm-linux-gnueabihf-*&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;tools/../../bin/arm-linux-gnueabihf-addr2line&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;tools/../../bin/arm-linux-gnueabihf-ar&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;tools/../../bin/arm-linux-gnueabihf-as&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;tools/../../bin/arm-linux-gnueabihf-c++&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;tools/../../bin/arm-linux-gnueabihf-c++filt&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;tools/../../bin/arm-linux-gnueabihf-cpp&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;tools/../../bin/arm-linux-gnueabihf-ct-ng.config&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;tools/../../bin/arm-linux-gnueabihf-dwp&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;tools/../../bin/arm-linux-gnueabihf-elfedit&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;tools/../../bin/arm-linux-gnueabihf-g++&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;tools/../../bin/arm-linux-gnueabihf-gcc&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;tools/../../bin/arm-linux-gnueabihf-gcc-4.8.3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;tools/../../bin/arm-linux-gnueabihf-gcc-ar&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;tools/../../bin/arm-linux-gnueabihf-gcc-nm&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;tools/../../bin/arm-linux-gnueabihf-gcc-ranlib&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;tools/../../bin/arm-linux-gnueabihf-gcov&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;tools/../../bin/arm-linux-gnueabihf-gdb&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;tools/../../bin/arm-linux-gnueabihf-gfortran&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;tools/../../bin/arm-linux-gnueabihf-gprof&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;tools/../../bin/arm-linux-gnueabihf-ld&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;tools/../../bin/arm-linux-gnueabihf-ld.bfd&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;tools/../../bin/arm-linux-gnueabihf-ldd&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;tools/../../bin/arm-linux-gnueabihf-ld.gold&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;tools/../../bin/arm-linux-gnueabihf-nm&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;tools/../../bin/arm-linux-gnueabihf-objcopy&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;tools/../../bin/arm-linux-gnueabihf-objdump&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;tools/../../bin/arm-linux-gnueabihf-pkg-config&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;tools/../../bin/arm-linux-gnueabihf-pkg-config-real&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;tools/../../bin/arm-linux-gnueabihf-ranlib&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;tools/../../bin/arm-linux-gnueabihf-readelf&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;tools/../../bin/arm-linux-gnueabihf-size&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;tools/../../bin/arm-linux-gnueabihf-strings&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;tools/../../bin/arm-linux-gnueabihf-strip&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
+&lt;p&gt;這邊我選用 &lt;strong&gt;gcc-linaro-arm-linux-gnueabihf-raspbian-x64&lt;/strong&gt; 作為我待會要 cross compile 的 toolchain&lt;/p&gt;
+&lt;h2 id=&quot;Raspberry-Pi-Kernel-cross-compile-update&quot;&gt;&lt;a href=&quot;#Raspberry-Pi-Kernel-cross-compile-update&quot; class=&quot;headerlink&quot; title=&quot;Raspberry Pi Kernel (cross-compile + update)&quot;&gt;&lt;/a&gt;Raspberry Pi Kernel (cross-compile + update)&lt;/h2&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;λ ~/rasp/ git clone https://github.com/raspberrypi/linux --depth 1&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;p&gt;進入資料夾後依序執行&lt;/p&gt;
+&lt;p&gt;1.先把建置環境清乾淨&lt;br&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;λ ~/rasp/linux/ make mrproper&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
+&lt;p&gt;2.把機器上現有的 Kernel Config 倒出來 (在板子上執行)&lt;br&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;# zcat /proc/config.gz &amp;gt; .config&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
+&lt;p&gt;然後再把這個 &lt;strong&gt;.config&lt;/strong&gt; 檔案傳回 &lt;strong&gt;linux 資料夾&lt;/strong&gt;底下&lt;/p&gt;
+&lt;p&gt;3.再來先設定好 &lt;code&gt;CROSS_COMPILE&lt;/code&gt; 環境變數後，執行 &lt;code&gt;make oldconfig&lt;/code&gt;&lt;br&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;λ ~/rasp/linux/ export CROSS_COMPILE=~/rasp/tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian-x64/bin/arm-linux-gnueabihf-&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;λ ~/rasp/linux/ ARCH=arm make oldconfig&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
+&lt;p&gt;PS1. 這邊 ARCH 記得要指定為 arm 不然會跑到你本機的架構 (ex: x86)&lt;br&gt;PS2. 執行 oldconfig 有可能會跳出一些選項要你選擇，是因為先前的 Kernel 沒有這些 options 新版本可能會有差異&lt;/p&gt;
+&lt;p&gt;4.最後執行 &lt;code&gt;make&lt;/code&gt;&lt;br&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;λ ~/rasp/linux/ ARCH=arm make&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
+&lt;p&gt;TicToc~TicToc 跑完後你就有全新的 Kernel 啦！&lt;/p&gt;
+&lt;p&gt;產出的檔案在 &lt;strong&gt;arch/arm/boot/Image&lt;/strong&gt;&lt;/p&gt;
+&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;λ ~/rasp/linux/ ls arch/arm/boot/Image -alh&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;-rwxrwxr-x 1 zack zack 8.1M Apr 27 21:03 arch/arm/boot/Image&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;p&gt;複製到機器上，&lt;code&gt;/boot/kernel_new.img&lt;/code&gt; 然後修改 &lt;code&gt;/boot/config.txt&lt;/code&gt; (怎麼會用附檔名 txt 呀好詭異 XDDD)，加入一行 &lt;code&gt;kernel=kernel_new.img&lt;/code&gt; ，原本的 kernel 先改個名子放旁邊。&lt;br&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;root@raspberrypi:/boot# cat config.txt&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;kernel=kernel_new.img&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
+&lt;p&gt;再來回到桌機這邊準備一下新的 Kernel modules&lt;br&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;λ ~/rasp/ mkdir modules&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;λ ~/rasp/linux/ ARCH=arm INSTALL_MOD_PATH=~/rasp/modules make modules_install&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
+&lt;p&gt;新版本的 modules 就會跑到 &lt;code&gt;~/rasp/modules&lt;/code&gt; 囉，把它們全部 SCP 到板子上的 &lt;strong&gt;/lib&lt;/strong&gt; 取代&lt;br&gt;(如果擔心玩壞可以先備份)&lt;/p&gt;
+&lt;p&gt;萬事搞定，直接下 Reboot 就可以看到裝著新的 Kernel 的 Raspberry Pi 啦&lt;del&gt;~&lt;/del&gt;&lt;/p&gt;
+&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;root@raspberrypi:/boot# dmesg&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;[    0.000000] Booting Linux on physical CPU 0xf00&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;[    0.000000] Initializing cgroup subsys cpu&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;[    0.000000] Initializing cgroup subsys cpuacct&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;[    0.000000] Linux version 3.18.11-v7+ (zack@ubuntu) (gcc version 4.8.3 20140303 (prerelease) (crosstool-NG linaro-1.13.1+bzr2650 - Linaro GCC 2014.0&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3) ) #1 SMP PREEMPT Mon Apr 27 21:03:05 CST 2015&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;[    0.000000] CPU: ARMv7 Processor [410fc075] revision 5 (ARMv7), cr=10c5387d&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;[    0.000000] CPU: PIPT / VIPT nonaliasing data cache, VIPT aliasing instruction cache&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;[    0.000000] Machine: BCM2709&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;[    0.000000] cma: Reserved 8 MiB at 0x3d800000&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;[    0.000000] Memory policy: Data cache writealloc&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;[    0.000000] On node 0 totalpages: 253952&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;[    0.000000] free_area_init_node: node 0, pgdat 8080f480, node_mem_map bd033000&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;[    0.000000]   Normal zone: 1984 pages used for memmap&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;[    0.000000]   Normal zone: 0 pages reserved&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;[    0.000000]   Normal zone: 253952 pages, LIFO batch:31&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;[    0.000000] [bcm2709_smp_init_cpus] enter (8620-&amp;gt;f3003010)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;[    0.000000] [bcm2709_smp_init_cpus] ncores=4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;[    0.000000] PERCPU: Embedded 10 pages/cpu @bd006000 s11456 r8192 d21312 u40960&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;h1 id=&quot;參考資料&quot;&gt;&lt;a href=&quot;#參考資料&quot; class=&quot;headerlink&quot; title=&quot;參考資料&quot;&gt;&lt;/a&gt;參考資料&lt;/h1&gt;&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;http://elinux.org/Raspberry_Pi_Kernel_Compilation&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;官方說明文件(其實已經很清楚了)&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+</content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;前陣子在家門口踢到一個…&lt;/p&gt;
+&lt;p&gt;  &lt;img src=&quot;https://igcdn-photos-a-a.akamaihd.net/hphotos-ak-xaf1/t51.2885-15/11123682_366899226847560_1223930663_n.jpg&quot; alt=&quot;&quot;&gt;&lt;/p&gt;
+&lt;p&gt;Raspberry Pi 二代目 Model B，然後就 &lt;del&gt;過著開開心心的生活&lt;/del&gt; 開始想把一堆東西裝上去然後&lt;del&gt;不知道要幹嘛!?&lt;/del&gt;書房的 Hub 滿了，所以我就要拿出之前買的 &lt;a href=&quot;http://www.mi.com/tw/miwifi/&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;小米隨身WiFi&lt;/a&gt; 拿出來插上…&lt;/p&gt;
+&lt;p&gt;就會發現，什麼事都沒有發生。因為…Driver 沒有進 Kernel 根據非官方 &lt;a href=&quot;https://github.com/porjo/mt7601&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;Github 上的 Repo&lt;/a&gt; 顯示：&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;This repository is based on the original driver released by MediaTek which was rejected from Linux kernel because of the poor code quality.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;嗯！所以展開自編之路…&lt;/p&gt;
+    
+    </summary>
+    
+    
+      <category term="Raspberry Pi" scheme="http://yulun.me/tags/Raspberry-Pi/"/>
+    
+      <category term="kernel" scheme="http://yulun.me/tags/kernel/"/>
+    
+      <category term="cross-compile" scheme="http://yulun.me/tags/cross-compile/"/>
+    
+      <category term="linux" scheme="http://yulun.me/tags/linux/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>架設 NFS Server 共享檔案 (Debian/Ubuntu)</title>
+    <link href="http://yulun.me/2014/nfs-server-share-files/"/>
+    <id>http://yulun.me/2014/nfs-server-share-files/</id>
+    <published>2014-12-22T21:37:39.000Z</published>
+    <updated>2016-04-28T16:57:13.070Z</updated>
+    
+    <content type="html">&lt;h2 id=&quot;Server&quot;&gt;&lt;a href=&quot;#Server&quot; class=&quot;headerlink&quot; title=&quot;Server&quot;&gt;&lt;/a&gt;Server&lt;/h2&gt;&lt;p&gt;&lt;code&gt;sudo apt-get install nfs-kernel-server&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;設定檔簡單設定一下&lt;/p&gt;
+&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;# /etc/exports: the access control list for filesystems which may be exported&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;#               to NFS clients.  See exports(5).&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;#&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;# Example for NFSv2 and NFSv3:&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;# /srv/homes       hostname1(rw,sync,no_subtree_check) hostname2(ro,sync,no_subtree_check)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;#&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;# Example for NFSv4:&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;# /srv/nfs4        gss/krb5i(rw,sync,fsid=0,crossmnt,no_subtree_check)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;# /srv/nfs4/homes  gss/krb5i(rw,sync,no_subtree_check)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;/home/zack/Dropbox/project 192.168.1.69(rw,sync,no_subtree_check)&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;h2 id=&quot;Client&quot;&gt;&lt;a href=&quot;#Client&quot; class=&quot;headerlink&quot; title=&quot;Client&quot;&gt;&lt;/a&gt;Client&lt;/h2&gt;&lt;p&gt;安裝 &lt;strong&gt;nfs-common&lt;/strong&gt;&lt;br&gt;&lt;code&gt;apt-get install nfs-common&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;檢查 host 有開放那些掛載點&lt;br&gt;&lt;code&gt;showmount -e 192.168.1.222&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;把 222 的 project 掛到本機來&lt;br&gt;&lt;code&gt;mount -t nfs 192.168.1.222:/home/zack/project /home/zack/project&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;以上基本就搞定囉！&lt;/p&gt;
+</content>
+    
+    <summary type="html">
+    
+      &lt;h2 id=&quot;Server&quot;&gt;&lt;a href=&quot;#Server&quot; class=&quot;headerlink&quot; title=&quot;Server&quot;&gt;&lt;/a&gt;Server&lt;/h2&gt;&lt;p&gt;&lt;code&gt;sudo apt-get install nfs-kernel-server&lt;/code&gt;&lt;/p
+    
+    </summary>
+    
+    
+      <category term="linux" scheme="http://yulun.me/tags/linux/"/>
+    
+      <category term="nfs" scheme="http://yulun.me/tags/nfs/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>Mosquitto 如何訂閱 bridge 連線狀態?</title>
+    <link href="http://yulun.me/2014/mosquitto-broker-bridge-disconnect-event/"/>
+    <id>http://yulun.me/2014/mosquitto-broker-bridge-disconnect-event/</id>
+    <published>2014-12-19T23:40:16.000Z</published>
+    <updated>2016-04-28T16:57:13.070Z</updated>
+    
+    <content type="html">&lt;p&gt;一般來說如果要得知 mqtt client 是不是離線了，可以透過 will message 來設定。但是  mosquitto 的貼心功能 bridge 要怎麼實現這個功能呢？&lt;/p&gt;
+&lt;p&gt;本來看使用說明 &lt;code&gt;/$SYS&lt;/code&gt; 這部分沒找到，原來藏在 &lt;code&gt;mosquitto.conf&lt;/code&gt; 的說明文檔中…&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;notifications [ true | false ]&lt;/strong&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;If set to true, publish notification messages to the local and remote brokers giving information about the state of the bridge connection. Retained messages are published to the topic &lt;code&gt;$SYS/broker/connection/&amp;lt;clientid&amp;gt;/state&lt;/code&gt; unless otherwise set with notification_topics. If the message is 1 then the connection is active, or 0 if the connection has failed. Defaults to true.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;&lt;strong&gt;notification_topic topic&lt;/strong&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Choose the topic on which notifications will be published for this bridge. If not set the messages will be sent on the topic &lt;code&gt;$SYS/broker/connection/&amp;lt;clientid&amp;gt;/state&lt;/code&gt;.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;很明顯可以看出只要訂閱 &lt;code&gt;$SYS/broker/connection/&amp;lt;clientid&amp;gt;/state&lt;/code&gt; 即可，上線會傳 &lt;code&gt;0&lt;/code&gt; 反之就是 &lt;code&gt;1&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;如此一來就不用自己做 keepalive 功能啦！&lt;/p&gt;
+&lt;p&gt;詳細說明：&lt;a href=&quot;http://mosquitto.org/man/mosquitto-conf-5.html&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;http://mosquitto.org/man/mosquitto-conf-5.html&lt;/a&gt;&lt;br&gt;$SYS/broker 詳細說明：&lt;a href=&quot;http://mosquitto.org/man/mosquitto-8.html&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;http://mosquitto.org/man/mosquitto-8.html&lt;/a&gt;&lt;/p&gt;
+</content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;一般來說如果要得知 mqtt client 是不是離線了，可以透過 will message 來設定。但是  mosquitto 的貼心功能 bridge 要怎麼實現這個功能呢？&lt;/p&gt;
+&lt;p&gt;本來看使用說明 &lt;code&gt;/$SYS&lt;/code&gt; 這部分沒找到，原來藏在 &lt;
+    
+    </summary>
+    
+    
+      <category term="mqtt" scheme="http://yulun.me/tags/mqtt/"/>
+    
+      <category term="mosquitto" scheme="http://yulun.me/tags/mosquitto/"/>
+    
+      <category term="iot" scheme="http://yulun.me/tags/iot/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>Docker 運行在 ARMv7 (MOXA UC8100)</title>
+    <link href="http://yulun.me/2014/docker-run-on-armv7-moxa-uc8100/"/>
+    <id>http://yulun.me/2014/docker-run-on-armv7-moxa-uc8100/</id>
+    <published>2014-12-19T23:20:56.000Z</published>
+    <updated>2016-04-28T16:57:13.066Z</updated>
+    
+    <content type="html">&lt;p&gt;暨上週參加完 &lt;a href=&quot;/2014/docker-container-summit-2014-ithome-note&quot;&gt;Container Summit&lt;/a&gt; 後，這天下班前忽然手癢把之前還沒搞定的 Docker on ARMv7 (Debian 7.7 Wheezy) 再玩一遍…&lt;/p&gt;
+&lt;a id=&quot;more&quot;&gt;&lt;/a&gt;
+&lt;h2 id=&quot;環境描述&quot;&gt;&lt;a href=&quot;#環境描述&quot; class=&quot;headerlink&quot; title=&quot;環境描述&quot;&gt;&lt;/a&gt;環境描述&lt;/h2&gt;&lt;p&gt;&lt;a href=&quot;http://www.moxa.com/product/UC-8100.htm&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;Moxa UC-8100&lt;/a&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;CPU: ARMv7 Cortex-A8 300 MHz processor&lt;/li&gt;
+&lt;li&gt;Kernel: 3.2.0&lt;/li&gt;
+&lt;li&gt;OS: Debian 7.7 Wheezy&lt;/li&gt;
+&lt;li&gt;RAM: 256 MB&lt;/li&gt;
+&lt;li&gt;Storage&lt;ul&gt;
+&lt;li&gt;內建 803 MB (剩餘 400 MB)&lt;/li&gt;
+&lt;li&gt;USB 隨身碟 16G (Docker 安裝於此，如何更改 Docker 預設路徑可參考上次的&lt;a href=&quot;/2014/change-docker-working-directory&quot;&gt;筆記&lt;/a&gt;)&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;figure class=&quot;highlight bash&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;root@Moxa:/home/moxa&lt;span class=&quot;comment&quot;&gt;# uname -a&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;Linux Moxa 3.2.0-uc8100 &lt;span class=&quot;comment&quot;&gt;#75 Thu Dec 18 19:34:11 CST 2014 armv7l GNU/Linux&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;h2 id=&quot;安裝過程&quot;&gt;&lt;a href=&quot;#安裝過程&quot; class=&quot;headerlink&quot; title=&quot;安裝過程&quot;&gt;&lt;/a&gt;安裝過程&lt;/h2&gt;&lt;h3 id=&quot;安裝-docker-io-package&quot;&gt;&lt;a href=&quot;#安裝-docker-io-package&quot; class=&quot;headerlink&quot; title=&quot;安裝 docker.io package&quot;&gt;&lt;/a&gt;安裝 docker.io package&lt;/h3&gt;&lt;p&gt;套件 &lt;a href=&quot;https://packages.debian.org/search?searchon=names&amp;amp;keywords=docker.io&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;docker.io&lt;/a&gt;，目前存在於 sid 與 jessie 中。stable 的 wheezy 沒有支援，所以我選擇直接把 sid 加到 source.list 來安裝。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;Package docker.io
+  jessie (testing) (admin): Linux container runtime 
+    1.3.2~dfsg1-1: amd64 armel armhf i386
+  sid (unstable) (admin): Linux container runtime 
+    1.3.3~dfsg1-1: amd64 armel armhf i386
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;我們可以用 &lt;code&gt;/apt-cache policy docker.io&lt;/code&gt; 看目前 source.list 中有那些存在這個 package，嗯…就是 sid (顯示為多此一舉)&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;λ ~/ apt-cache policy docker.io
+docker.io:
+  Installed: (none)
+  Candidate: 1.3.3~dfsg1-1
+  Version table:
+     1.3.3~dfsg1-1 0
+        500 http://ftp.debian.org/debian/ sid/main armhf Packages
+        100 /var/lib/dpkg/status
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;最後，安裝直接下 &lt;code&gt;apt-get -t unstable install docker.io&lt;/code&gt;&lt;/p&gt;
+&lt;h3 id=&quot;下載-docker-image&quot;&gt;&lt;a href=&quot;#下載-docker-image&quot; class=&quot;headerlink&quot; title=&quot;下載 docker image&quot;&gt;&lt;/a&gt;下載 docker image&lt;/h3&gt;&lt;p&gt;&lt;strong&gt;注意；&lt;/strong&gt;一定要下載 arm build 的 image 喔！不要異想天開把 x86_64 的 image 來用。Docker 只是 kernel 往上的虛擬化技術，不像 QEMU 之類的可以模擬硬體。&lt;/p&gt;
+&lt;p&gt;這邊有幾個 image 給大家參考，我看大部分都是使用 &lt;strong&gt;Raspberrypi&lt;/strong&gt; 的玩家製作的。(反正大家都是 ARMHF 就都可以用啦！)&lt;/p&gt;
+&lt;p&gt;&lt;a href=&quot;https://registry.hub.docker.com/repos/armbuild/&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;Armbuild Org&lt;/a&gt; 這是一家提供 arm-based server 的法國公司，製作很多 arm build 的 image。&lt;/p&gt;
+&lt;p&gt;以下是我安裝過的 images 都可以用，其中 Fedora 不知道在肥什麼的…?&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;REPOSITORY                   TAG       CREATED      VIRTUAL SIZE
+armbuild/archlinux-disk      latest    4 days ago   436.7 MB
+armbuild/fedora-qcow-minimal 20        11 days ago  1.017 GB
+armbuild/fedora-qcow-minimal heisenbug 11 days ago  1.017 GB
+armbuild/fedora-qcow-minimal latest    11 days ago  1.017 GB
+ygrenzinger/archlinux-arm    latest    5 weeks ago  736.4 MB
+armbuild/debian              latest    8 weeks ago  74.13 MB
+armbuild/debian              wheezy    8 weeks ago  74.13 MB
+mazzolino/armhf-ubuntu       14.04     11 weeks ago 291.5 MB
+mazzolino/armhf-ubuntu       latest    11 weeks ago 291.5 MB
+mazzolino/armhf-ubuntu       trusty    11 weeks ago 291.5 MB
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;順利地安裝完畢 docker.io 也拉好了 images，滿心期待終於可以在這麼小 &lt;strong&gt;CPU 300 MHZ + 256 MB&lt;/strong&gt; 的機器上玩 container ！結果…&lt;/p&gt;
+&lt;h4 id=&quot;錯誤1-掛載點沒有賦予執行權限&quot;&gt;&lt;a href=&quot;#錯誤1-掛載點沒有賦予執行權限&quot; class=&quot;headerlink&quot; title=&quot;錯誤1: 掛載點沒有賦予執行權限&quot;&gt;&lt;/a&gt;錯誤1: 掛載點沒有賦予執行權限&lt;/h4&gt;&lt;pre&gt;&lt;code&gt;2014/08/04 10:28:07 Error response from daemon: Cannot start container 281818d1e14ed9b304g85753017ee9c6d0a43d327686262425cd0731a1b1998b: fork/exec /media/1f193829-fe86-4444-b1e7-2538848b1d83/docker/init/dockerinit-1.3.2: permission denied
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;先用 &lt;code&gt;umount&lt;/code&gt; 把掛載點卸下，然後 &lt;code&gt;mount -o exec&lt;/code&gt; 重新掛載起來即可&lt;/p&gt;
+&lt;h4 id=&quot;錯誤2-Kernel-LXC-功能沒有-完全-開啟&quot;&gt;&lt;a href=&quot;#錯誤2-Kernel-LXC-功能沒有-完全-開啟&quot; class=&quot;headerlink&quot; title=&quot;錯誤2: Kernel LXC 功能沒有(完全)開啟&quot;&gt;&lt;/a&gt;錯誤2: Kernel LXC 功能沒有(完全)開啟&lt;/h4&gt;&lt;p&gt;&lt;code&gt;docker cgroup is not mounted&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;完全沒想到會有這個錯誤，因為我認為 docker.io package 都裝好了，怎麼會是這個原因…難道 postinstall 都不會 check 環境嗎…囧rz&lt;/p&gt;
+&lt;p&gt;可以先執行 &lt;code&gt;lxc-checkconfig&lt;/code&gt;，以下是輸出：&lt;/p&gt;
+&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;root@Moxa:/home/moxa# lxc-checkconfig &lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;--- Namespaces ---&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;Namespaces: enabled&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;Utsname namespace: enabled&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;Ipc namespace: enabled&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;Pid namespace: enabled&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;User namespace: enabled&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;Network namespace: enabled&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;Multiple /dev/pts instances: enabled&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;--- Control groups ---&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;Cgroup: enabled&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;Cgroup clone_children flag: enabled&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;Cgroup device: enabled&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;Cgroup sched: enabled&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;Cgroup cpu account: enabled&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;Cgroup memory controller: enabled&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;--- Misc ---&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;Veth pair device: enabled&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;Macvlan: enabled&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;Vlan: enabled&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;File capabilities: enabled&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;Note : Before booting a new kernel, you can check its configuration&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;usage : CONFIG=/path/to/config /usr/bin/lxc-checkconfig&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;p&gt;原本我的 &lt;code&gt;Cgroup&lt;/code&gt;, &lt;code&gt;Veth pair device&lt;/code&gt;, &lt;code&gt;Macvlan&lt;/code&gt; 是沒有開啟的，而這些是啟用 container 技術的必須前提，所以就請同事幫我&lt;strong&gt;重編一個新的 kernel 啦&lt;/strong&gt;！(真好，如果不是在硬體廠我就要自己搞了！XDDDDDD)。&lt;/p&gt;
+&lt;h2 id=&quot;實際測試&quot;&gt;&lt;a href=&quot;#實際測試&quot; class=&quot;headerlink&quot; title=&quot;實際測試&quot;&gt;&lt;/a&gt;實際測試&lt;/h2&gt;&lt;p&gt;經過前面的重重關卡終於到了測試時間…&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;armbuild/fedora-qcow-minimal:20&lt;/li&gt;
+&lt;li&gt;armbuild/fedora-qcow-minimal:20&lt;/li&gt;
+&lt;li&gt;mazzolino/armhf-ubuntu:14.04&lt;/li&gt;
+&lt;li&gt;armbuild/debian:latest&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;上面這幾個 image 都可以正常執行，於是我又開始測試 device node 有沒有辦法透通&lt;/p&gt;
+&lt;p&gt;沒想到只要透過指令 &lt;a href=&quot;https://docs.docker.com/reference/commandline/cli/&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;&lt;code&gt;--device&lt;/code&gt;&lt;/a&gt; 就可以了&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;code&gt;--device=[]&lt;/code&gt; Add a host device to the container&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;於是我就用 &lt;code&gt;/dev/tty05:/ttyM0&lt;/code&gt; 把 host 的 serial port 導到裡面 ttyM0 ，經過測試一切正常！哈哈～&lt;/p&gt;
+&lt;p&gt;結束了一個玩轉 Container on Embedded System 上的成就 check!!!&lt;/p&gt;
+&lt;p&gt;目前看到 &lt;a href=&quot;https://resin.io/&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;https://resin.io/&lt;/a&gt; 好像很猛，還有前面的 &lt;a href=&quot;http://labs.online.net/&quot; rel=&quot;external nofollow&quot; target=&quot;_blank&quot;&gt;http://labs.online.net/&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;有任何應用歡迎提供阿…!?&lt;/p&gt;
+</content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;暨上週參加完 &lt;a href=&quot;/2014/docker-container-summit-2014-ithome-note&quot;&gt;Container Summit&lt;/a&gt; 後，這天下班前忽然手癢把之前還沒搞定的 Docker on ARMv7 (Debian 7.7 Wheezy) 再玩一遍…&lt;/p&gt;
+    
+    </summary>
+    
+    
+      <category term="Docker" scheme="http://yulun.me/tags/Docker/"/>
+    
+      <category term="Ubuntu" scheme="http://yulun.me/tags/Ubuntu/"/>
+    
+      <category term="Debian" scheme="http://yulun.me/tags/Debian/"/>
+    
+      <category term="ArchLinux" scheme="http://yulun.me/tags/ArchLinux/"/>
+    
+      <category term="Fedora" scheme="http://yulun.me/tags/Fedora/"/>
+    
+  </entry>
+  
+</feed>

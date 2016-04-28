@@ -1,0 +1,689 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  <link href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css"/>
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+<link href="/vendors/font-awesome/css/font-awesome.min.css?v=4.4.0" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.0.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Raspberry Pi,kernel,cross-compile,linux," />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="Somewhere I Belong" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.0.1" />
+
+
+
+
+
+
+<meta name="description" content="前陣子在家門口踢到一個…
+  
+Raspberry Pi 二代目 Model B，然後就 過著開開心心的生活 開始想把一堆東西裝上去然後不知道要幹嘛!?書房的 Hub 滿了，所以我就要拿出之前買的 小米隨身WiFi 拿出來插上…
+就會發現，什麼事都沒有發生。因為…Driver 沒有進 Kernel 根據非官方 Github 上的 Repo 顯示：
+
+This repository is based">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Raspberry Pi 樹莓派編譯新核心">
+<meta property="og:url" content="http://yulun.me/2015/Raspberry-pi-cross-compile-kernel/index.html">
+<meta property="og:site_name" content="Somewhere I Belong">
+<meta property="og:description" content="前陣子在家門口踢到一個…
+  
+Raspberry Pi 二代目 Model B，然後就 過著開開心心的生活 開始想把一堆東西裝上去然後不知道要幹嘛!?書房的 Hub 滿了，所以我就要拿出之前買的 小米隨身WiFi 拿出來插上…
+就會發現，什麼事都沒有發生。因為…Driver 沒有進 Kernel 根據非官方 Github 上的 Repo 顯示：
+
+This repository is based">
+<meta property="og:image" content="https://igcdn-photos-a-a.akamaihd.net/hphotos-ak-xaf1/t51.2885-15/11123682_366899226847560_1223930663_n.jpg">
+<meta property="og:updated_time" content="2016-04-28T16:57:13.066Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Raspberry Pi 樹莓派編譯新核心">
+<meta name="twitter:description" content="前陣子在家門口踢到一個…
+  
+Raspberry Pi 二代目 Model B，然後就 過著開開心心的生活 開始想把一堆東西裝上去然後不知道要幹嘛!?書房的 Hub 滿了，所以我就要拿出之前買的 小米隨身WiFi 拿出來插上…
+就會發現，什麼事都沒有發生。因為…Driver 沒有進 Kernel 根據非官方 Github 上的 Repo 顯示：
+
+This repository is based">
+<meta name="twitter:image" content="https://igcdn-photos-a-a.akamaihd.net/hphotos-ak-xaf1/t51.2885-15/11123682_366899226847560_1223930663_n.jpg">
+
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 0,
+      author: '博主'
+    }
+  };
+</script>
+
+  <title> Raspberry Pi 樹莓派編譯新核心 | Somewhere I Belong </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-tw">
+
+  
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-5959305-16', 'auto');
+  ga('send', 'pageview');
+</script>
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Somewhere I Belong</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+  <p class="site-subtitle">All about geek's life</p>
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-home fa-fw"></i> <br />
+            
+            首頁
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-projects">
+          <a href="/projects" rel="section">
+            
+              <i class="menu-item-icon fa fa-question-circle fa-fw"></i> <br />
+            
+            開源專案
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-user fa-fw"></i> <br />
+            
+            關於
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-archive fa-fw"></i> <br />
+            
+            歸檔
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-tags fa-fw"></i> <br />
+            
+            標籤
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                Raspberry Pi 樹莓派編譯新核心
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">發表於</span>
+            <time itemprop="dateCreated" datetime="2015-04-27T22:29:57+00:00" content="4月 27 2015">
+              4月 27 2015
+            </time>
+          </span>
+
+          
+
+          
+            
+              <span class="post-comments-count">
+                &nbsp; | &nbsp;
+                <a href="/2015/Raspberry-pi-cross-compile-kernel/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2015/Raspberry-pi-cross-compile-kernel/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+          
+          
+
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>前陣子在家門口踢到一個…</p>
+<p>  <img src="https://igcdn-photos-a-a.akamaihd.net/hphotos-ak-xaf1/t51.2885-15/11123682_366899226847560_1223930663_n.jpg" alt=""></p>
+<p>Raspberry Pi 二代目 Model B，然後就 <del>過著開開心心的生活</del> 開始想把一堆東西裝上去然後<del>不知道要幹嘛!?</del>書房的 Hub 滿了，所以我就要拿出之前買的 <a href="http://www.mi.com/tw/miwifi/" rel="external nofollow" target="_blank">小米隨身WiFi</a> 拿出來插上…</p>
+<p>就會發現，什麼事都沒有發生。因為…Driver 沒有進 Kernel 根據非官方 <a href="https://github.com/porjo/mt7601" rel="external nofollow" target="_blank">Github 上的 Repo</a> 顯示：</p>
+<blockquote>
+<p>This repository is based on the original driver released by MediaTek which was rejected from Linux kernel because of the poor code quality.</p>
+</blockquote>
+<p>嗯！所以展開自編之路…</p>
+<a id="more"></a>
+<p>故事一波三折，曲折離奇…先進入正題</p>
+<h2 id="準備環境"><a href="#準備環境" class="headerlink" title="準備環境"></a>準備環境</h2><p>我的環境是 Ubuntu 64bit<br><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">λ ~/uname -a</span><br><span class="line">Linux ubuntu 3.13.0-35-generic #62-Ubuntu SMP Fri Aug 15 01:58:42 UTC 2014 x86_64 x86_64 x86_64 GNU/Linux</span><br></pre></td></tr></table></figure></p>
+<p>創一個資料夾來放等等要下載的東西<br><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">λ ~/mkdir ~/rasp</span><br></pre></td></tr></table></figure></p>
+<p><strong>注意</strong> 以下的 git clone 會帶  <code>--depth 1</code> 表示我們只抓<strong>預設 branch</strong> 的最後一個 commit 這是為了加快下載速度以及節省空間</p>
+<h2 id="Raspberry-Pi-Toolchain-download"><a href="#Raspberry-Pi-Toolchain-download" class="headerlink" title="Raspberry Pi Toolchain (download)"></a>Raspberry Pi Toolchain (download)</h2><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">λ ~/rasp/ git clone https://github.com/raspberrypi/tools --depth 1</span><br></pre></td></tr></table></figure>
+<p>toolchain 位於下面位置<br><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">λ ~/rasp/ ls tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian-x64/bin/arm-linux-gnueabihf-*</span><br><span class="line">tools/../../bin/arm-linux-gnueabihf-addr2line</span><br><span class="line">tools/../../bin/arm-linux-gnueabihf-ar</span><br><span class="line">tools/../../bin/arm-linux-gnueabihf-as</span><br><span class="line">tools/../../bin/arm-linux-gnueabihf-c++</span><br><span class="line">tools/../../bin/arm-linux-gnueabihf-c++filt</span><br><span class="line">tools/../../bin/arm-linux-gnueabihf-cpp</span><br><span class="line">tools/../../bin/arm-linux-gnueabihf-ct-ng.config</span><br><span class="line">tools/../../bin/arm-linux-gnueabihf-dwp</span><br><span class="line">tools/../../bin/arm-linux-gnueabihf-elfedit</span><br><span class="line">tools/../../bin/arm-linux-gnueabihf-g++</span><br><span class="line">tools/../../bin/arm-linux-gnueabihf-gcc</span><br><span class="line">tools/../../bin/arm-linux-gnueabihf-gcc-4.8.3</span><br><span class="line">tools/../../bin/arm-linux-gnueabihf-gcc-ar</span><br><span class="line">tools/../../bin/arm-linux-gnueabihf-gcc-nm</span><br><span class="line">tools/../../bin/arm-linux-gnueabihf-gcc-ranlib</span><br><span class="line">tools/../../bin/arm-linux-gnueabihf-gcov</span><br><span class="line">tools/../../bin/arm-linux-gnueabihf-gdb</span><br><span class="line">tools/../../bin/arm-linux-gnueabihf-gfortran</span><br><span class="line">tools/../../bin/arm-linux-gnueabihf-gprof</span><br><span class="line">tools/../../bin/arm-linux-gnueabihf-ld</span><br><span class="line">tools/../../bin/arm-linux-gnueabihf-ld.bfd</span><br><span class="line">tools/../../bin/arm-linux-gnueabihf-ldd</span><br><span class="line">tools/../../bin/arm-linux-gnueabihf-ld.gold</span><br><span class="line">tools/../../bin/arm-linux-gnueabihf-nm</span><br><span class="line">tools/../../bin/arm-linux-gnueabihf-objcopy</span><br><span class="line">tools/../../bin/arm-linux-gnueabihf-objdump</span><br><span class="line">tools/../../bin/arm-linux-gnueabihf-pkg-config</span><br><span class="line">tools/../../bin/arm-linux-gnueabihf-pkg-config-real</span><br><span class="line">tools/../../bin/arm-linux-gnueabihf-ranlib</span><br><span class="line">tools/../../bin/arm-linux-gnueabihf-readelf</span><br><span class="line">tools/../../bin/arm-linux-gnueabihf-size</span><br><span class="line">tools/../../bin/arm-linux-gnueabihf-strings</span><br><span class="line">tools/../../bin/arm-linux-gnueabihf-strip</span><br></pre></td></tr></table></figure></p>
+<p>這邊我選用 <strong>gcc-linaro-arm-linux-gnueabihf-raspbian-x64</strong> 作為我待會要 cross compile 的 toolchain</p>
+<h2 id="Raspberry-Pi-Kernel-cross-compile-update"><a href="#Raspberry-Pi-Kernel-cross-compile-update" class="headerlink" title="Raspberry Pi Kernel (cross-compile + update)"></a>Raspberry Pi Kernel (cross-compile + update)</h2><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">λ ~/rasp/ git clone https://github.com/raspberrypi/linux --depth 1</span><br></pre></td></tr></table></figure>
+<p>進入資料夾後依序執行</p>
+<p>1.先把建置環境清乾淨<br><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">λ ~/rasp/linux/ make mrproper</span><br></pre></td></tr></table></figure></p>
+<p>2.把機器上現有的 Kernel Config 倒出來 (在板子上執行)<br><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line"># zcat /proc/config.gz &gt; .config</span><br></pre></td></tr></table></figure></p>
+<p>然後再把這個 <strong>.config</strong> 檔案傳回 <strong>linux 資料夾</strong>底下</p>
+<p>3.再來先設定好 <code>CROSS_COMPILE</code> 環境變數後，執行 <code>make oldconfig</code><br><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">λ ~/rasp/linux/ export CROSS_COMPILE=~/rasp/tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian-x64/bin/arm-linux-gnueabihf-</span><br><span class="line">λ ~/rasp/linux/ ARCH=arm make oldconfig</span><br></pre></td></tr></table></figure></p>
+<p>PS1. 這邊 ARCH 記得要指定為 arm 不然會跑到你本機的架構 (ex: x86)<br>PS2. 執行 oldconfig 有可能會跳出一些選項要你選擇，是因為先前的 Kernel 沒有這些 options 新版本可能會有差異</p>
+<p>4.最後執行 <code>make</code><br><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">λ ~/rasp/linux/ ARCH=arm make</span><br></pre></td></tr></table></figure></p>
+<p>TicToc~TicToc 跑完後你就有全新的 Kernel 啦！</p>
+<p>產出的檔案在 <strong>arch/arm/boot/Image</strong></p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">λ ~/rasp/linux/ ls arch/arm/boot/Image -alh</span><br><span class="line">-rwxrwxr-x 1 zack zack 8.1M Apr 27 21:03 arch/arm/boot/Image</span><br></pre></td></tr></table></figure>
+<p>複製到機器上，<code>/boot/kernel_new.img</code> 然後修改 <code>/boot/config.txt</code> (怎麼會用附檔名 txt 呀好詭異 XDDD)，加入一行 <code>kernel=kernel_new.img</code> ，原本的 kernel 先改個名子放旁邊。<br><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">root@raspberrypi:/boot# cat config.txt</span><br><span class="line">kernel=kernel_new.img</span><br></pre></td></tr></table></figure></p>
+<p>再來回到桌機這邊準備一下新的 Kernel modules<br><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">λ ~/rasp/ mkdir modules</span><br><span class="line">λ ~/rasp/linux/ ARCH=arm INSTALL_MOD_PATH=~/rasp/modules make modules_install</span><br></pre></td></tr></table></figure></p>
+<p>新版本的 modules 就會跑到 <code>~/rasp/modules</code> 囉，把它們全部 SCP 到板子上的 <strong>/lib</strong> 取代<br>(如果擔心玩壞可以先備份)</p>
+<p>萬事搞定，直接下 Reboot 就可以看到裝著新的 Kernel 的 Raspberry Pi 啦<del>~</del></p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">root@raspberrypi:/boot# dmesg</span><br><span class="line">[    0.000000] Booting Linux on physical CPU 0xf00</span><br><span class="line">[    0.000000] Initializing cgroup subsys cpu</span><br><span class="line">[    0.000000] Initializing cgroup subsys cpuacct</span><br><span class="line">[    0.000000] Linux version 3.18.11-v7+ (zack@ubuntu) (gcc version 4.8.3 20140303 (prerelease) (crosstool-NG linaro-1.13.1+bzr2650 - Linaro GCC 2014.0</span><br><span class="line">3) ) #1 SMP PREEMPT Mon Apr 27 21:03:05 CST 2015</span><br><span class="line">[    0.000000] CPU: ARMv7 Processor [410fc075] revision 5 (ARMv7), cr=10c5387d</span><br><span class="line">[    0.000000] CPU: PIPT / VIPT nonaliasing data cache, VIPT aliasing instruction cache</span><br><span class="line">[    0.000000] Machine: BCM2709</span><br><span class="line">[    0.000000] cma: Reserved 8 MiB at 0x3d800000</span><br><span class="line">[    0.000000] Memory policy: Data cache writealloc</span><br><span class="line">[    0.000000] On node 0 totalpages: 253952</span><br><span class="line">[    0.000000] free_area_init_node: node 0, pgdat 8080f480, node_mem_map bd033000</span><br><span class="line">[    0.000000]   Normal zone: 1984 pages used for memmap</span><br><span class="line">[    0.000000]   Normal zone: 0 pages reserved</span><br><span class="line">[    0.000000]   Normal zone: 253952 pages, LIFO batch:31</span><br><span class="line">[    0.000000] [bcm2709_smp_init_cpus] enter (8620-&gt;f3003010)</span><br><span class="line">[    0.000000] [bcm2709_smp_init_cpus] ncores=4</span><br><span class="line">[    0.000000] PERCPU: Embedded 10 pages/cpu @bd006000 s11456 r8192 d21312 u40960</span><br></pre></td></tr></table></figure>
+<h1 id="參考資料"><a href="#參考資料" class="headerlink" title="參考資料"></a>參考資料</h1><ul>
+<li><a href="http://elinux.org/Raspberry_Pi_Kernel_Compilation" rel="external nofollow" target="_blank">官方說明文件(其實已經很清楚了)</a></li>
+</ul>
+
+      
+    </div>
+    
+    <div>
+      
+        
+      
+    </div>
+
+    <div>
+      
+        
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Raspberry-Pi/" rel="tag">#Raspberry Pi</a>
+          
+            <a href="/tags/kernel/" rel="tag">#kernel</a>
+          
+            <a href="/tags/cross-compile/" rel="tag">#cross-compile</a>
+          
+            <a href="/tags/linux/" rel="tag">#linux</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2014/nfs-server-share-files/" rel="next" title="架設 NFS Server 共享檔案 (Debian/Ubuntu)">
+                <i class="fa fa-chevron-left"></i> 架設 NFS Server 共享檔案 (Debian/Ubuntu)
+              </a>
+            
+          </div>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2015/raspberrypi-wifi-mt7601-mediatek-ralink/" rel="prev" title="編譯小米 WIFI (mt7601) 給樹莓派使用">
+                編譯小米 WIFI (mt7601) 給樹莓派使用 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目錄
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            本站概覽
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel ">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/default_avatar.jpg"
+               alt="YuLun Shih" />
+          <p class="site-author-name" itemprop="name">YuLun Shih</p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">66</span>
+              <span class="site-state-item-name">文章</span>
+            </a>
+          </div>
+
+          
+            <div class="site-state-item site-state-categories">
+              
+                <span class="site-state-item-count">6</span>
+                <span class="site-state-item-name">分類</span>
+              
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">122</span>
+                <span class="site-state-item-name">標籤</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+          <div class="cc-license motion-element" itemprop="license">
+            <a href="http://creativecommons.org/licenses/by-nc-sa/4.0" class="cc-opacity" target="_blank">
+              <img src="/images/cc-by-nc-sa.svg" alt="Creative Commons" />
+            </a>
+          </div>
+        
+
+        
+        
+
+      </section>
+
+      
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+            
+              
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#準備環境"><span class="nav-number">1.</span> <span class="nav-text">準備環境</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Raspberry-Pi-Toolchain-download"><span class="nav-number">2.</span> <span class="nav-text">Raspberry Pi Toolchain (download)</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Raspberry-Pi-Kernel-cross-compile-update"><span class="nav-number">3.</span> <span class="nav-text">Raspberry Pi Kernel (cross-compile + update)</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#參考資料"><span class="nav-number"></span> <span class="nav-text">參考資料</span></a></div>
+            
+          </div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2016</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">YuLun Shih</span>
+</div>
+
+<div class="powered-by">
+  由 <a class="theme-link" href="http://hexo.io">Hexo</a> 強力驅動
+</div>
+
+<div class="theme-info">
+  主題 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/vendors/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.0.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.0.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.0.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.0.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.0.1"></script>
+
+
+
+  
+
+
+
+  
+
+    <script type="text/javascript">
+      var disqus_shortname = 'zacksnote';
+      var disqus_identifier = '2015/Raspberry-pi-cross-compile-kernel/';
+      var disqus_title = 'Raspberry Pi 樹莓派編譯新核心';
+      var disqus_url = 'http://yulun.me/2015/Raspberry-pi-cross-compile-kernel/';
+
+      function run_disqus_script(disqus_script){
+        var dsq = document.createElement('script');
+        dsq.type = 'text/javascript';
+        dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+      }
+
+      run_disqus_script('count.js');
+      
+        run_disqus_script('embed.js');
+      
+    </script>
+  
+
+
+
+  
+  
+  
+
+  
+
+  
+
+</body>
+</html>

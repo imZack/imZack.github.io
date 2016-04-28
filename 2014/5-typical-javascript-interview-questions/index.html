@@ -1,0 +1,675 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  <link href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css"/>
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+<link href="/vendors/font-awesome/css/font-awesome.min.css?v=4.4.0" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.0.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="JavaScript,面試," />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="Somewhere I Belong" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.0.1" />
+
+
+
+
+
+
+<meta name="description" content="以下內容為閱讀 5 Typical JavaScript Interview Exercises 文章後的觀後感。
+這幾個問題說基本也滿基本的但是有些地方一不小心可能就會犯錯！">
+<meta property="og:type" content="article">
+<meta property="og:title" content="5 個 JavaScript 面試常見問題">
+<meta property="og:url" content="http://yulun.me/2014/5-typical-javascript-interview-questions/index.html">
+<meta property="og:site_name" content="Somewhere I Belong">
+<meta property="og:description" content="以下內容為閱讀 5 Typical JavaScript Interview Exercises 文章後的觀後感。
+這幾個問題說基本也滿基本的但是有些地方一不小心可能就會犯錯！">
+<meta property="og:updated_time" content="2016-04-28T16:57:13.066Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="5 個 JavaScript 面試常見問題">
+<meta name="twitter:description" content="以下內容為閱讀 5 Typical JavaScript Interview Exercises 文章後的觀後感。
+這幾個問題說基本也滿基本的但是有些地方一不小心可能就會犯錯！">
+
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 0,
+      author: '博主'
+    }
+  };
+</script>
+
+  <title> 5 個 JavaScript 面試常見問題 | Somewhere I Belong </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-tw">
+
+  
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-5959305-16', 'auto');
+  ga('send', 'pageview');
+</script>
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Somewhere I Belong</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+  <p class="site-subtitle">All about geek's life</p>
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-home fa-fw"></i> <br />
+            
+            首頁
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-projects">
+          <a href="/projects" rel="section">
+            
+              <i class="menu-item-icon fa fa-question-circle fa-fw"></i> <br />
+            
+            開源專案
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-user fa-fw"></i> <br />
+            
+            關於
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-archive fa-fw"></i> <br />
+            
+            歸檔
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-tags fa-fw"></i> <br />
+            
+            標籤
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                5 個 JavaScript 面試常見問題
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">發表於</span>
+            <time itemprop="dateCreated" datetime="2014-09-22T23:23:12+00:00" content="9月 22 2014">
+              9月 22 2014
+            </time>
+          </span>
+
+          
+
+          
+            
+              <span class="post-comments-count">
+                &nbsp; | &nbsp;
+                <a href="/2014/5-typical-javascript-interview-questions/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2014/5-typical-javascript-interview-questions/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+          
+          
+
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>以下內容為閱讀 <a href="http://www.sitepoint.com/5-typical-javascript-interview-exercises/" rel="external nofollow" target="_blank">5 Typical JavaScript Interview Exercises</a> 文章後的觀後感。</p>
+<p>這幾個問題說基本也滿基本的但是有些地方一不小心可能就會犯錯！</p>
+<a id="more"></a>
+<h2 id="問題一：Scope"><a href="#問題一：Scope" class="headerlink" title="問題一：Scope"></a>問題一：Scope</h2><figure class="highlight js"><table><tr><td class="code"><pre><span class="line">(<span class="function"><span class="keyword">function</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">  <span class="keyword">var</span> a = b = <span class="number">5</span>;</span><br><span class="line">&#125;)();</span><br><span class="line"> </span><br><span class="line"><span class="built_in">console</span>.log(b);</span><br></pre></td></tr></table></figure>
+<p>請問 <code>console.log(b);</code> 印出來的結果是？</p>
+<p><strong>答案</strong><br><code>5</code></p>
+<p>在這個 IIFE 中，變數 <code>a</code> 使用了 <code>var</code> 關鍵字來宣告成為 local variable，而 <code>b</code> 則沒有 <code>var</code> 修飾所以宣告成為 global variable。</p>
+<p>那如何避免這個問題呢？只需要在 IIFE 中加入 <code>&#39;use strict&#39;</code>，如此一來只要有任何變數試圖宣告為全域變數都會出現錯誤警告。</p>
+<figure class="highlight js"><table><tr><td class="code"><pre><span class="line">(<span class="function"><span class="keyword">function</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line"><span class="meta">  'use strict'</span>;</span><br><span class="line">  <span class="keyword">var</span> a = <span class="built_in">window</span>.b = <span class="number">5</span>;</span><br><span class="line">&#125;)();</span><br><span class="line"> </span><br><span class="line"><span class="built_in">console</span>.log(b);</span><br></pre></td></tr></table></figure>
+<p>所以假若你還是要把 <code>b</code> 宣告為全域變數 (global variable) 則可以透過 <code>window.b</code> 來指定。</p>
+<h2 id="問題二：Create-“native”-methods"><a href="#問題二：Create-“native”-methods" class="headerlink" title="問題二：Create “native” methods"></a>問題二：Create “native” methods</h2><p>擴充 String 的 method 使其能呼叫 <code>.repeatify(num)</code> 來產生重複的字串<br><figure class="highlight js"><table><tr><td class="code"><pre><span class="line"><span class="built_in">console</span>.log(<span class="string">'hello'</span>.repeatify(<span class="number">3</span>));</span><br></pre></td></tr></table></figure></p>
+<p>並且印出 <code>hellohellohello</code></p>
+<p><strong>答案</strong><br><figure class="highlight js"><table><tr><td class="code"><pre><span class="line"><span class="built_in">String</span>.prototype.repeatify = <span class="built_in">String</span>.prototype.repeatify || <span class="function"><span class="keyword">function</span>(<span class="params">times</span>) </span>&#123;</span><br><span class="line">   <span class="keyword">var</span> str = <span class="string">''</span>;</span><br><span class="line"> </span><br><span class="line">   <span class="keyword">for</span> (<span class="keyword">var</span> i = <span class="number">0</span>; i &lt; times; i++) &#123;</span><br><span class="line">      str += <span class="keyword">this</span>;</span><br><span class="line">   &#125;</span><br><span class="line"> </span><br><span class="line">   <span class="keyword">return</span> str;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure></p>
+<p>這題應該就比較簡單了，直接從 <code>String.prototype</code> 下手，並使用 <code>String.prototype.repeatify || function(times)</code> 來避免覆寫已經存在的方法。</p>
+<p>這個技巧很常用在一些 <code>shim</code> 的功能 (用來擴充本來瀏覽器沒有提供的功能)。</p>
+<h2 id="問題三：Hoisting"><a href="#問題三：Hoisting" class="headerlink" title="問題三：Hoisting"></a>問題三：Hoisting</h2><p>寫出以下程式碼執行結果，並說明原因。</p>
+<figure class="highlight js"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">test</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">   <span class="built_in">console</span>.log(a);</span><br><span class="line">   <span class="built_in">console</span>.log(foo());</span><br><span class="line">    </span><br><span class="line">   <span class="keyword">var</span> a = <span class="number">1</span>;</span><br><span class="line">   <span class="function"><span class="keyword">function</span> <span class="title">foo</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">      <span class="keyword">return</span> <span class="number">2</span>;</span><br><span class="line">   &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">test();</span><br></pre></td></tr></table></figure>
+<p><strong>答案</strong><br>第一個 <code>undefined</code><br>第二個 <code>2</code></p>
+<p>所有的變數 (Variable) 與 函式 (Function) 都會被往上提 hoisted 至 Function 的頂端。但是要注意的是，變數往上提<strong>並不會一起賦值</strong>。所以 <code>a</code> 印出來是 <code>undefined</code>，我們把上面的 code 轉換成提升後等價的 code 如下：</p>
+<figure class="highlight js"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">test</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">   <span class="keyword">var</span> a;</span><br><span class="line">   <span class="function"><span class="keyword">function</span> <span class="title">foo</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">      <span class="keyword">return</span> <span class="number">2</span>;</span><br><span class="line">   &#125;</span><br><span class="line"> </span><br><span class="line">   <span class="built_in">console</span>.log(a);</span><br><span class="line">   <span class="built_in">console</span>.log(foo());</span><br><span class="line">    </span><br><span class="line">   a = <span class="number">1</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">test();</span><br></pre></td></tr></table></figure>
+<p>這樣是否更能明白了呢？其實我看這篇文章之前對於這個 <code>hosited</code> 概念十分陌生，可以參見另一篇文章 <a href="http://www.sitepoint.com/back-to-basics-javascript-hoisting/" rel="external nofollow" target="_blank">Back to Basics: JavaScript Hoisting</a></p>
+<h2 id="問題四：How-this-work-in-JavaScript"><a href="#問題四：How-this-work-in-JavaScript" class="headerlink" title="問題四：How this work in JavaScript"></a>問題四：How <code>this</code> work in JavaScript</h2><p>寫出以下程式碼執行結果，並說明原因。</p>
+<figure class="highlight js"><table><tr><td class="code"><pre><span class="line"><span class="keyword">var</span> fullname = <span class="string">'John Doe'</span>;</span><br><span class="line"><span class="keyword">var</span> obj = &#123;</span><br><span class="line">  fullname: <span class="string">'Colin Ihrig'</span>,</span><br><span class="line">  prop: &#123;</span><br><span class="line">    fullname: <span class="string">'Aurelio De Rosa'</span>,</span><br><span class="line">    getFullname: <span class="function"><span class="keyword">function</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">       <span class="keyword">return</span> <span class="keyword">this</span>.fullname;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;;</span><br><span class="line"> </span><br><span class="line"><span class="built_in">console</span>.log(obj.prop.getFullname());</span><br><span class="line"> </span><br><span class="line"><span class="keyword">var</span> test = obj.prop.getFullname;</span><br><span class="line"> </span><br><span class="line"><span class="built_in">console</span>.log(test());</span><br></pre></td></tr></table></figure>
+<p>第一個 <code>Aurelio De Rosa</code> 原錯誤答案<code>Colin Ihrig</code></p>
+<p>第二個 <code>John Doe</code></p>
+<p>JavaScript 很不一樣的一點就是 <code>this</code> 並<strong>不是跟著 instance 走</strong>。而是<strong>依據誰呼叫 (invoke)</strong> 來決定 <code>this</code> 的參考值。(這也常讓不熟稔 JS 的人嘗盡苦頭)…</p>
+<p>第一個 <code>Colin Ihrig</code> 是因為 <code>getFullname()</code> 呼叫是由 <code>obj.prop</code> 發出，此時 <code>this.fullname</code> 即為 <code>obj.fullname</code>；而第二個 <code>John Doe</code> 則是由 <code>window</code> 呼叫 <code>test</code> 實際上是 <code>obj.prop.getFullname</code> 因此 <code>this.fullname === window.fullname</code> 於是便印出 <code>John Doe</code>。</p>
+<h2 id="問題五：call-and-apply"><a href="#問題五：call-and-apply" class="headerlink" title="問題五：call() and apply()"></a>問題五：<code>call()</code> and <code>apply()</code></h2><p>修正上面題目，要把第二個印出的答案變為 <code>Colin Ihrig</code> 該如何做？</p>
+<p>2016.03.07 訂正:<br><figure class="highlight js"><table><tr><td class="code"><pre><span class="line"><span class="built_in">console</span>.log(test.call(obj));</span><br></pre></td></tr></table></figure></p>
+<p>錯誤答案:<br><figure class="highlight js"><table><tr><td class="code"><pre><span class="line"><span class="built_in">console</span>.log(test.call(obj.prop));</span><br></pre></td></tr></table></figure></p>
+<p>基本上 <code>call()</code> 與 <code>apply()</code> 用法差異如下：<br><figure class="highlight js"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">function</span>.<span class="title">call</span>(<span class="params">thisArg[, argument1[, argument2[, ...]]]</span>);</span><br><span class="line"><span class="title">function</span>.<span class="title">apply</span>(<span class="params">thisArg[, argumentArray]</span>);</span></span><br></pre></td></tr></table></figure></p>
+<blockquote>
+<p>所有語法大致上與 apply() 相同，他們基本上不同處只有 call() 接受一連串的參數，而 apply() 單一的array作為參數 — <a href="https://developer.mozilla.org/zh-TW/docs/Web/JavaScript/Reference/Global_Objects/Function/call" rel="external nofollow" target="_blank">MDN</a></p>
+</blockquote>
+<p>以上簡單分享，自己也重新複習一遍了…Q_Q</p>
+<p>ps. 原文的下面還有一些回覆，並且提供另一些題目。我們改天再一起來研究看看！</p>
+<ul>
+<li><a href="http://tomhicks.github.io/code/2014/09/12/javascript-interview-questions.html" rel="external nofollow" target="_blank">http://tomhicks.github.io/code/2014/09/12/javascript-interview-questions.html</a></li>
+</ul>
+
+      
+    </div>
+    
+    <div>
+      
+        
+      
+    </div>
+
+    <div>
+      
+        
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/JavaScript/" rel="tag">#JavaScript</a>
+          
+            <a href="/tags/面試/" rel="tag">#面試</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2014/change-docker-working-directory/" rel="next" title="更改 Docker 預設執行位置">
+                <i class="fa fa-chevron-left"></i> 更改 Docker 預設執行位置
+              </a>
+            
+          </div>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2014/Agreeing-to-the-Xcode-license/" rel="prev" title="Xcode 更新後不能編譯">
+                Xcode 更新後不能編譯 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目錄
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            本站概覽
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel ">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/default_avatar.jpg"
+               alt="YuLun Shih" />
+          <p class="site-author-name" itemprop="name">YuLun Shih</p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">66</span>
+              <span class="site-state-item-name">文章</span>
+            </a>
+          </div>
+
+          
+            <div class="site-state-item site-state-categories">
+              
+                <span class="site-state-item-count">6</span>
+                <span class="site-state-item-name">分類</span>
+              
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">122</span>
+                <span class="site-state-item-name">標籤</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+          <div class="cc-license motion-element" itemprop="license">
+            <a href="http://creativecommons.org/licenses/by-nc-sa/4.0" class="cc-opacity" target="_blank">
+              <img src="/images/cc-by-nc-sa.svg" alt="Creative Commons" />
+            </a>
+          </div>
+        
+
+        
+        
+
+      </section>
+
+      
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+            
+              
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#問題一：Scope"><span class="nav-number">1.</span> <span class="nav-text">問題一：Scope</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#問題二：Create-“native”-methods"><span class="nav-number">2.</span> <span class="nav-text">問題二：Create “native” methods</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#問題三：Hoisting"><span class="nav-number">3.</span> <span class="nav-text">問題三：Hoisting</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#問題四：How-this-work-in-JavaScript"><span class="nav-number">4.</span> <span class="nav-text">問題四：How this work in JavaScript</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#問題五：call-and-apply"><span class="nav-number">5.</span> <span class="nav-text">問題五：call() and apply()</span></a></li></ol></div>
+            
+          </div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2016</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">YuLun Shih</span>
+</div>
+
+<div class="powered-by">
+  由 <a class="theme-link" href="http://hexo.io">Hexo</a> 強力驅動
+</div>
+
+<div class="theme-info">
+  主題 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/vendors/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.0.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.0.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.0.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.0.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.0.1"></script>
+
+
+
+  
+
+
+
+  
+
+    <script type="text/javascript">
+      var disqus_shortname = 'zacksnote';
+      var disqus_identifier = '2014/5-typical-javascript-interview-questions/';
+      var disqus_title = '5 個 JavaScript 面試常見問題';
+      var disqus_url = 'http://yulun.me/2014/5-typical-javascript-interview-questions/';
+
+      function run_disqus_script(disqus_script){
+        var dsq = document.createElement('script');
+        dsq.type = 'text/javascript';
+        dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+      }
+
+      run_disqus_script('count.js');
+      
+        run_disqus_script('embed.js');
+      
+    </script>
+  
+
+
+
+  
+  
+  
+
+  
+
+  
+
+</body>
+</html>

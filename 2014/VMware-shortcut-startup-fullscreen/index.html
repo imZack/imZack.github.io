@@ -1,0 +1,667 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  <link href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css"/>
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+<link href="/vendors/font-awesome/css/font-awesome.min.css?v=4.4.0" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.0.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="VMware," />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="Somewhere I Belong" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.0.1" />
+
+
+
+
+
+
+<meta name="description" content="每次使用 VM 環境時打開的步驟都是
+
+開 VM Player or Virtual
+找到你要開的 VM 點兩下
+放大全螢幕 或 調整到適當的位置
+
+有鑑於我想長期開始使用 VM 當桌上開發環境，因此特別找一下有沒有方法可以快速開啟並且最大化！(因為我有雙螢幕)">
+<meta property="og:type" content="article">
+<meta property="og:title" content="快速啟動虛擬機 (建立捷徑 Windows/VMware)">
+<meta property="og:url" content="http://yulun.me/2014/VMware-shortcut-startup-fullscreen/index.html">
+<meta property="og:site_name" content="Somewhere I Belong">
+<meta property="og:description" content="每次使用 VM 環境時打開的步驟都是
+
+開 VM Player or Virtual
+找到你要開的 VM 點兩下
+放大全螢幕 或 調整到適當的位置
+
+有鑑於我想長期開始使用 VM 當桌上開發環境，因此特別找一下有沒有方法可以快速開啟並且最大化！(因為我有雙螢幕)">
+<meta property="og:updated_time" content="2016-04-28T16:57:13.066Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="快速啟動虛擬機 (建立捷徑 Windows/VMware)">
+<meta name="twitter:description" content="每次使用 VM 環境時打開的步驟都是
+
+開 VM Player or Virtual
+找到你要開的 VM 點兩下
+放大全螢幕 或 調整到適當的位置
+
+有鑑於我想長期開始使用 VM 當桌上開發環境，因此特別找一下有沒有方法可以快速開啟並且最大化！(因為我有雙螢幕)">
+
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 0,
+      author: '博主'
+    }
+  };
+</script>
+
+  <title> 快速啟動虛擬機 (建立捷徑 Windows/VMware) | Somewhere I Belong </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-tw">
+
+  
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-5959305-16', 'auto');
+  ga('send', 'pageview');
+</script>
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Somewhere I Belong</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+  <p class="site-subtitle">All about geek's life</p>
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-home fa-fw"></i> <br />
+            
+            首頁
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-projects">
+          <a href="/projects" rel="section">
+            
+              <i class="menu-item-icon fa fa-question-circle fa-fw"></i> <br />
+            
+            開源專案
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-user fa-fw"></i> <br />
+            
+            關於
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-archive fa-fw"></i> <br />
+            
+            歸檔
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-tags fa-fw"></i> <br />
+            
+            標籤
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                快速啟動虛擬機 (建立捷徑 Windows/VMware)
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">發表於</span>
+            <time itemprop="dateCreated" datetime="2014-09-01T22:22:10+00:00" content="9月 1 2014">
+              9月 1 2014
+            </time>
+          </span>
+
+          
+
+          
+            
+              <span class="post-comments-count">
+                &nbsp; | &nbsp;
+                <a href="/2014/VMware-shortcut-startup-fullscreen/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2014/VMware-shortcut-startup-fullscreen/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+          
+          
+
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>每次使用 VM 環境時打開的步驟都是</p>
+<ol>
+<li>開 VM Player or Virtual</li>
+<li>找到你要開的 VM 點兩下</li>
+<li>放大全螢幕 或 調整到適當的位置</li>
+</ol>
+<p>有鑑於我想長期開始使用 VM 當桌上開發環境，因此特別找一下有沒有方法可以快速開啟並且最大化！(因為我有雙螢幕)</p>
+<a id="more"></a>
+<h1 id="VMware"><a href="#VMware" class="headerlink" title="VMware"></a>VMware</h1><p>以下是 VMware 的捷徑內容<br><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">&quot;C:\Program Files (x86)\VMware\VMware Workstation\vmware.exe&quot; -X &quot;C:\xxx\Workspace Ubuntu 64bit.vmx&quot;</span><br></pre></td></tr></table></figure></p>
+<h3 id="語法"><a href="#語法" class="headerlink" title="語法"></a>語法</h3><p><strong>Linux</strong><br><figure class="highlight sh"><table><tr><td class="code"><pre><span class="line">/usr/bin/vmware [-n] [-x] [-X] [-t] [-q] [<span class="_">-s</span> variable_name = value ] [-v] [ path_to_vm .vmx] [http[s]:// path_to_vm .vmx] [X toolkit options]</span><br></pre></td></tr></table></figure></p>
+<p><strong>Windows</strong><br><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">C:\Program Files\VMware\VMware Workstation\vmware.exe [-n] [-x] [-X] [-t] [-q] [-s variable_name = value ] [-v] [ path_to_vm .vmx] [http[s]:// path_to_vm .vmx]</span><br></pre></td></tr></table></figure></p>
+<h3 id="選項說明"><a href="#選項說明" class="headerlink" title="選項說明"></a>選項說明</h3><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">-n Opens a new Workstation window.</span><br><span class="line"></span><br><span class="line">-t Opens a virtual machine in a new tab in the existing Workstation window.</span><br><span class="line"></span><br><span class="line">-x Powers on the virtual machine when Workstation starts. This option is equivalent to clicking Power On in the Workstation toolbar.</span><br><span class="line"></span><br><span class="line">-X Powers on the virtual machine and switches the Workstation window to full screen mode.</span><br><span class="line"></span><br><span class="line">-q Closes the virtual machine tab when the virtual machine powers off. If no other virtual machine is open, it also exits Workstation. This option is useful when the guest operating system can power off the virtual machine.</span><br><span class="line"></span><br><span class="line">-s Sets the specified variable to the specified value. You can specify at the command line any variable names and values that are valid in the configuration file.</span><br><span class="line"></span><br><span class="line">-v Displays the product name, version, and build number.</span><br><span class="line"></span><br><span class="line">path_to_vm.vmx Launches a virtual machine by using the specified virtual machine configuration (.vmx) file.</span><br><span class="line"></span><br><span class="line">http[s]:// path_to_vm .vmx Stream a virtual machine from a Web server. The virtual machine must be made available for streaming.</span><br></pre></td></tr></table></figure>
+<h1 id="參考資料"><a href="#參考資料" class="headerlink" title="參考資料"></a>參考資料</h1><ol>
+<li><p><a href="http://pubs.vmware.com/workstation-10/index.jsp#com.vmware.ws.using.doc/GUID-DA203314-F153-4F1F-8FCF-A7700530943D.html?resultof=%2522%2563%256f%256d%256d%2561%256e%2564%2522%2520" rel="external nofollow" target="_blank">http://pubs.vmware.com/workstation-10/index.jsp#com.vmware.ws.using.doc/GUID-DA203314-F153-4F1F-8FCF-A7700530943D.html?resultof=%2522%2563%256f%256d%256d%2561%256e%2564%2522%2520</a></p>
+</li>
+<li><p><a href="http://pubs.vmware.com/workstation-10/index.jsp?topic=%2Fcom.vmware.ws.using.doc%2FGUID-7369457F-FE1D-40FE-97B6-B29CA4916CCD.html" rel="external nofollow" target="_blank">http://pubs.vmware.com/workstation-10/index.jsp?topic=%2Fcom.vmware.ws.using.doc%2FGUID-7369457F-FE1D-40FE-97B6-B29CA4916CCD.html</a></p>
+</li>
+</ol>
+
+      
+    </div>
+    
+    <div>
+      
+        
+      
+    </div>
+
+    <div>
+      
+        
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/VMware/" rel="tag">#VMware</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2014/VMware-network-bridge-mode-failed-after-host-os-sleep/" rel="next" title="VMware 在 HOST OS 休眠後網路斷線問題">
+                <i class="fa fa-chevron-left"></i> VMware 在 HOST OS 休眠後網路斷線問題
+              </a>
+            
+          </div>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2014/ubuntu-apt-get-disable-ipv6-digitalocean/" rel="prev" title="Ubuntu 強制停用 IPv6 (Digital Ocean)">
+                Ubuntu 強制停用 IPv6 (Digital Ocean) <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目錄
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            本站概覽
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel ">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/default_avatar.jpg"
+               alt="YuLun Shih" />
+          <p class="site-author-name" itemprop="name">YuLun Shih</p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">66</span>
+              <span class="site-state-item-name">文章</span>
+            </a>
+          </div>
+
+          
+            <div class="site-state-item site-state-categories">
+              
+                <span class="site-state-item-count">6</span>
+                <span class="site-state-item-name">分類</span>
+              
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">122</span>
+                <span class="site-state-item-name">標籤</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+          <div class="cc-license motion-element" itemprop="license">
+            <a href="http://creativecommons.org/licenses/by-nc-sa/4.0" class="cc-opacity" target="_blank">
+              <img src="/images/cc-by-nc-sa.svg" alt="Creative Commons" />
+            </a>
+          </div>
+        
+
+        
+        
+
+      </section>
+
+      
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+            
+              
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#VMware"><span class="nav-number">1.</span> <span class="nav-text">VMware</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#語法"><span class="nav-number">1.0.1.</span> <span class="nav-text">語法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#選項說明"><span class="nav-number">1.0.2.</span> <span class="nav-text">選項說明</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#參考資料"><span class="nav-number">2.</span> <span class="nav-text">參考資料</span></a></li></ol></div>
+            
+          </div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2016</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">YuLun Shih</span>
+</div>
+
+<div class="powered-by">
+  由 <a class="theme-link" href="http://hexo.io">Hexo</a> 強力驅動
+</div>
+
+<div class="theme-info">
+  主題 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/vendors/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.0.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.0.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.0.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.0.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.0.1"></script>
+
+
+
+  
+
+
+
+  
+
+    <script type="text/javascript">
+      var disqus_shortname = 'zacksnote';
+      var disqus_identifier = '2014/VMware-shortcut-startup-fullscreen/';
+      var disqus_title = '快速啟動虛擬機 (建立捷徑 Windows/VMware)';
+      var disqus_url = 'http://yulun.me/2014/VMware-shortcut-startup-fullscreen/';
+
+      function run_disqus_script(disqus_script){
+        var dsq = document.createElement('script');
+        dsq.type = 'text/javascript';
+        dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+      }
+
+      run_disqus_script('count.js');
+      
+        run_disqus_script('embed.js');
+      
+    </script>
+  
+
+
+
+  
+  
+  
+
+  
+
+  
+
+</body>
+</html>
