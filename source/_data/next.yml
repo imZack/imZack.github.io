@@ -43,7 +43,7 @@ favicon:
   #ms_browserconfig: /images/browserconfig.xml
 
 # Set default keywords (Use a comma to separate)
-keywords: "python, nodejs, embeddedsystem"
+keywords: "iiot, linux, python, node.js, embeddedsystem"
 
 # Set rss to false to disable feed link.
 # Leave rss as empty to use site's feed link.
@@ -106,7 +106,8 @@ menu:
   #categories: /categories/ || th
   archives: /archives/ || archive
   #schedule: /schedule/ || calendar
-  sitemap: /sitemap.xml || sitemap
+  開源專案: /projects/ || code-fork
+  # sitemap: /sitemap.xml || sitemap
   #commonweal: /404/ || heartbeat
 
 # Enable/Disable menu icons.

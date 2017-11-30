@@ -2,7 +2,7 @@ title: '我的開源專案列表'
 date: 2015-12-20 00:00:00
 ---
 
-- **北藝大校車時刻表** (IONIC 寫的跨平台 APP，iOS 上架偷懶中)
+- **北藝大校車時刻表** (IONIC 寫的跨平台 APP，iOS 上架 沒繳錢下架中 😂)
   - [Blog > 北藝大校車時刻表 APP](/tnua)
   - [Play Store](https://play.google.com/store/apps/details?id=zack.tnuabus&hl=zh_TW)
   - [Github](https://github.com/imZack/tnua-bus)
